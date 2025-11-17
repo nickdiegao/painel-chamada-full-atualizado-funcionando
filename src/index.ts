@@ -4,9 +4,18 @@ import bodyParser from 'body-parser';
 import path from 'path';
 import { Sector, Physician, Patient, PanelUpdate, SectorStatus, PhysicianStatus, Route } from './models';
 
+// const app = express();
+// app.use(cors());
+// app.use(bodyParser.json());
+
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+
+// servir arquivos estáticos (index.html, tv.html, app.js, tv.js, estilos etc.)
+// usa caminho relativo ao dist -> ../public
+app.use(express.static(path.join(__dirname, '..', 'public')));
+
 
 // serve static public files
 app.use(express.static(path.join(__dirname, '..', 'public')));
