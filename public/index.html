@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Painel Admin</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="container">
+    <h1>Painel de Chamada — Admin</h1>
+
+    <section id="sectors-admin">
+      <h2>Setores</h2>
+      <div id="sectors-list"></div>
+
+      <div class="admin-sector-form">
+        <label for="sector-select">Selecione setor:</label>
+        <select id="sector-select"></select>
+        <label for="sector-status">Status:</label>
+        <select id="sector-status">
+          <option value="Aberto">Aberto</option>
+          <option value="Restrito">Restrito</option>
+        </select>
+        <!-- <label for="sector-reason">Motivo (se restrito):</label>
+        <input id="sector-reason" placeholder="Motivo..." /> -->
+        <div class="reason-buttons" id="reason-buttons" style="display:none">
+  <label>Motivo da restrição:</label>
+  <div class="btn-group">
+    <button type="button" data-reason="Superlotação">Superlotação</button>
+    <button type="button" data-reason="Equipe incompleta">Equipe incompleta</button>
+    <button type="button" data-reason="Intercorrência grave">Intercorrência grave</button>
+  </div>
+</div>
+
+<div class="eta-select" id="eta-select" style="display:none">
+  <label>Previsão (minutos):</label>
+  <select id="sector-eta">
+  </select>
+</div>
+
+<div class="instruction-buttons" id="instruction-buttons" style="display:none">
+  <label>Orientação para casos graves:</label>
+  <div class="btn-group">
+    <button type="button" data-instruction="Dirijam-se a recepção">Dirijam-se a recepção</button>
+    <button type="button" data-instruction="Dirijam-se a classificação de risco">Dirijam-se a classificação de risco</button>
+  </div>
+</div>
+<button id="save-sector">Salvar</button>
+      </div>
+    </section>
+
+    <p class="hint">Abra a TV em <a href="/tv" target="_blank">/tv</a></p>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

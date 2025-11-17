@@ -1,0 +1,93 @@
+html,body{height:100%;margin:0;padding:0;background:#071124;color:#fff;font-family:Segoe UI, Roboto, Arial;}
+.tv-container{padding:50px 60px;box-sizing:border-box;}
+header{text-align:center;margin-bottom:28px;}
+header h1{font-size:64px;color:#38bdf8;animation:glowPulse 3s ease-in-out infinite;}
+@keyframes glowPulse{0%{text-shadow:0 0 8px rgba(56,189,248,0.35)}50%{text-shadow:0 0 20px rgba(56,189,248,0.8)}100%{text-shadow:0 0 8px rgba(56,189,248,0.35)}}
+.tv-sectors{display:flex;flex-direction:column;gap:22px;align-items:center;max-width:1200px;margin:0 auto;}
+.tv-sector{width:92%;max-width:1000px;padding:28px 36px;border-radius:14px;color:#fff;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(2,6,23,0.6);}
+
+/* === ABERTO — brilho realmente suave, respirante === */
+.tv-sector.Aberto {
+  background: linear-gradient(135deg, #064e3b 0%, #0a5f46 60%, #0f6f4f 100%);
+  color: #ffffff;
+
+  /* brilho muito leve e difuso */
+  box-shadow:
+    0 0 12px rgba(16, 185, 129, 0.10),
+    0 0 32px rgba(16, 185, 129, 0.08);
+
+  /* sem deslocamento perceptível */
+  animation: openUltraSoft 6s ease-in-out infinite;
+}
+
+/* super suave, como respiração — sem saltos */
+@keyframes openUltraSoft {
+  0% {
+    box-shadow:
+      0 0 14px rgba(16, 185, 129, 0.10),
+      0 0 32px rgba(16, 185, 129, 0.08);
+    filter: brightness(1);
+  }
+  50% {
+    box-shadow:
+      0 0 22px rgba(16, 185, 129, 0.14),
+      0 0 48px rgba(16, 185, 129, 0.12);
+    filter: brightness(1.06);
+  }
+  100% {
+    box-shadow:
+      0 0 14px rgba(16, 185, 129, 0.10),
+      0 0 32px rgba(16, 185, 129, 0.08);
+    filter: brightness(1);
+  }
+}
+
+@keyframes openPulse{0%{transform:translateY(0);opacity:1;}50%{transform:translateY(-6px);opacity:0.95;}100%{transform:translateY(0);opacity:1;}}
+.tv-sector.Restrito {
+  background: linear-gradient(135deg, #cc3333, #b91c1c); /* vermelho mais escuro */
+  animation: restrictedGlow 2s ease-in-out infinite;
+}
+@keyframes restrictedGlow {
+  0% {
+    box-shadow: 0 0 15px rgba(255, 80, 80, 0.5),
+                0 0 30px rgba(255, 20, 20, 0.6);
+  }
+  50% {
+    box-shadow: 0 0 30px rgba(255, 100, 100, 0.9),
+                0 0 50px rgba(255, 40, 40, 1);
+  }
+  100% {
+    box-shadow: 0 0 15px rgba(255, 80, 80, 0.5),
+                0 0 30px rgba(255, 20, 20, 0.6);
+  }
+}
+.tv-sector h3{margin:0;font-size:32px;font-weight:800;}
+.tv-sector .bigstatus{margin-top:12px;font-size:44px;font-weight:900;}
+.tv-sector .reason{margin-top:14px;font-size:20px;}
+@media(max-width:700px){header h1{font-size:40px}.tv-sector{padding:18px}.tv-sector h3{font-size:20px}.tv-sector .bigstatus{font-size:28px}}
+/* Exibição clara da previsão e instrução */
+.tv-sector .eta {
+  margin-top: 10px;
+  font-size: 20px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+}
+
+.tv-sector .instruction {
+  margin-top: 8px;
+  font-size: 18px;
+  background: rgba(0,0,0,0.12);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.tv-sector .reason {
+  margin-top: 12px;
+  font-size: 20px;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
