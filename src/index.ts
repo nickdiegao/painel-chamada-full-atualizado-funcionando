@@ -199,4 +199,6 @@ app.get('/tv', (req, res) => {
 
 // fallback already served by express.static for public files
 
-app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on 0.0.0.0:${PORT}`);
+});
