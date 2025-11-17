@@ -1,8 +1,8 @@
-html,body{height:100%;margin:0;padding:0;background:#071124;color:#fff;font-family:Segoe UI, Roboto, Arial;}
+html,body{height:100%;margin:0;padding:0;background:/*71124*/#FFF5F2;color:#fff;font-family:Segoe UI, Roboto, Arial;}
 .tv-container{padding:50px 60px;box-sizing:border-box;}
 header{text-align:center;margin-bottom:28px;}
-header h1{font-size:64px;color:#38bdf8;animation:glowPulse 3s ease-in-out infinite;}
-@keyframes glowPulse{0%{text-shadow:0 0 8px rgba(56,189,248,0.35)}50%{text-shadow:0 0 20px rgba(56,189,248,0.8)}100%{text-shadow:0 0 8px rgba(56,189,248,0.35)}}
+header h1{font-size:64px;color:#154D71;animation:glowPulse 3s ease-in-out infinite;}
+@keyframes glowPulse{0%{text-shadow:0 0 8px #1C6EA4}50%{text-shadow:0 0 20px #33A1E0}100%{text-shadow:0 0 8px #1C6EA4}}
 .tv-sectors{display:flex;flex-direction:column;gap:22px;align-items:center;max-width:1200px;margin:0 auto;}
 .tv-sector{width:92%;max-width:1000px;padding:28px 36px;border-radius:14px;color:#fff;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(2,6,23,0.6);}
 
@@ -13,7 +13,7 @@ header h1{font-size:64px;color:#38bdf8;animation:glowPulse 3s ease-in-out infini
 
   /* brilho muito leve e difuso */
   box-shadow:
-    0 0 12px rgba(16, 185, 129, 0.10),
+    0 0 12px rgba(41, 221, 6, 0.1),
     0 0 32px rgba(16, 185, 129, 0.08);
 
   /* sem deslocamento perceptível */
@@ -91,3 +91,8 @@ header h1{font-size:64px;color:#38bdf8;animation:glowPulse 3s ease-in-out infini
   opacity: 0.95;
 }
 
+.logo-fixa {
+  display: block;
+  margin: 20px auto; /* centraliza horizontalmente */
+  width: 450px; /* ajuste o tamanho aqui */
+}
