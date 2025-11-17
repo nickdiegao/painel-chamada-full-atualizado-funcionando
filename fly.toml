@@ -1,9 +1,9 @@
-# fly.toml app configuration file generated for painel-chamada-full-atualizado on 2025-11-17T13:29:15-03:00
+# fly.toml app configuration file generated for painel-chamada-hga on 2025-11-17T17:56:12Z
 #
 # See https://fly.io/docs/reference/configuration/ for information about how to use this file.
 #
 
-app = 'painel-chamada-full-atualizado'
+app = 'painel-chamada-hga'
 primary_region = 'gru'
 
 [build]
@@ -20,3 +20,4 @@ primary_region = 'gru'
   memory = '1gb'
   cpu_kind = 'shared'
   cpus = 1
+  memory_mb = 1024
