@@ -1,33 +1,49 @@
+// src/app.ts
 import express from 'express';
 import cors from 'cors';
-import bodyParser from 'body-parser';
 import path from 'path';
+import session from 'express-session';
+import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+
+// modelos (mantive seu import original)
 import { Sector, Physician, Patient, PanelUpdate, SectorStatus, PhysicianStatus, Route } from './models';
 
-// const app = express();
-// app.use(cors());
-// app.use(bodyParser.json());
+dotenv.config();
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json());
 
-// servir arquivos estáticos (index.html, tv.html, app.js, tv.js, estilos etc.)
-// usa caminho relativo ao dist -> ../public
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// parsers (usar apenas estes)
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
 
+// static (aponta para ../public - funciona em ts-node e em dist)
+// IMPORTANT: index:false -> evita que express sirva index.html automaticamente (prevenção de acesso direto)
+const publicPath = path.join(__dirname, '..', 'public');
+app.use(express.static(publicPath, { index: false }));
 
-// serve static public files
-app.use(express.static(path.join(__dirname, '..', 'public')));
+// cookie + session
+app.use(cookieParser());
+app.use(
+  session({
+    secret: process.env.SESSION_SECRET || 'troque-isto-por-uma-chave-secreta',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 2, // 2 horas
+      // secure: true // habilite em produção com HTTPS
+    },
+  })
+);
 
 const PORT = process.env.PORT ? Number(process.env.PORT) : 3333;
 
-// in-memory state
+// ---------- in-memory state (mantive seu código) ----------
 const sectors = new Map<string, Sector>();
 const physicians = new Map<string, Physician>();
 const patients = new Map<string, Patient>();
 
-// initial sample data
 sectors.set('s1', { id: 's1', name: 'Emergência Adulto', status: 'Aberto' });
 sectors.set('s2', { id: 's2', name: 'Emergência Pediátrica', status: 'Restrito', reason: 'Superlotação' });
 sectors.set('s3', { id: 's3', name: 'Emergência Odontológica', status: 'Aberto' });
@@ -44,11 +60,64 @@ const clients: Array<{ id: string; res: express.Response }> = [];
 function sendEvent(update: PanelUpdate) {
   const payload = `data: ${JSON.stringify(update)}\n\n`;
   clients.forEach(c => {
-    try { c.res.write(payload); } catch(e) {}
+    try { c.res.write(payload); } catch(e) { /* ignore */ }
   });
 }
 
-// SSE endpoint
+// ---------- Authentication helpers ----------
+function requireAuth(req: express.Request, res: express.Response, next: express.NextFunction) {
+  if (req.session && (req.session as any).isAdmin) return next();
+
+  // se for request AJAX/JSON, retorne 401 JSON; senão redirecione para /login
+  const wantsJson =
+    req.xhr ||
+    (req.headers['accept'] && (req.headers['accept'] as string).includes('application/json')) ||
+    (req.headers['content-type'] && (req.headers['content-type'] as string).includes('application/json'));
+
+  if (wantsJson) return res.status(401).json({ error: 'not authenticated' });
+  return res.redirect('/login');
+}
+
+// ---------- Auth endpoints ----------
+// Serve a página de login (arquivo public/login.html)
+app.get('/login', (req, res) => {
+  return res.sendFile(path.join(publicPath, 'login.html'));
+});
+
+// POST /login - aceita form-urlencoded ou JSON, responde JSON { ok:true } em sucesso
+app.post('/login', (req, res) => {
+  console.log('POST /login - body:', req.body);
+  const { username, password } = req.body || {};
+  const ADMIN_USER = process.env.ADMIN_USER || 'admin';
+  const ADMIN_PASS = process.env.ADMIN_PASS || 'senha123';
+
+  if (!username || !password) {
+    return res.status(400).json({ ok: false, error: 'username/password missing' });
+  }
+
+  if (username === ADMIN_USER && password === ADMIN_PASS) {
+    (req.session as any).isAdmin = true;
+    (req.session as any).user = username;
+    return res.json({ ok: true });
+  }
+
+  return res.status(401).json({ ok: false, error: 'Credenciais inválidas' });
+});
+
+// session-check (para o frontend saber se já está logado)
+app.get('/session-check', (req, res) => {
+  const authed = !!(req.session && (req.session as any).isAdmin);
+  return res.json({ authenticated: authed });
+});
+
+// logout
+app.post('/logout', (req, res) => {
+  req.session?.destroy(() => {
+    return res.json({ ok: true });
+  });
+});
+
+// ---------- SSE endpoint (público para TVs) ----------
 app.get('/events', (req, res) => {
   res.setHeader('Content-Type', 'text/event-stream');
   res.setHeader('Cache-Control', 'no-cache');
@@ -75,29 +144,24 @@ app.get('/events', (req, res) => {
   });
 });
 
-// REST endpoints - sectors
-app.get('/sectors', (_req, res) => res.json(Array.from(sectors.values())));
+// ---------- REST endpoints (agora protegidos por requireAuth) ----------
+app.get('/sectors', requireAuth, (_req, res) => res.json(Array.from(sectors.values())));
 
-// --- Handler: atualizar setor (status, reason, etaMinutes, instruction) ---
-app.post('/sectors/:id', (req, res) => {
+app.post('/sectors/:id', requireAuth, (req, res) => {
   const id = req.params.id as string;
   const sector = sectors.get(id);
   if (!sector) return res.status(404).json({ error: 'sector not found' });
 
-  // pegar valores do body (aceita número para etaMinutes)
   const status = req.body.status as SectorStatus | undefined;
   const reason = typeof req.body.reason === 'string' ? req.body.reason.trim() : undefined;
-  // converter explicitamente para número quando possível
   const etaRaw = req.body.etaMinutes;
   const eta = (typeof etaRaw === 'number') ? etaRaw : (typeof etaRaw === 'string' && etaRaw !== '' ? Number(etaRaw) : undefined);
   const instruction = typeof req.body.instruction === 'string' ? req.body.instruction.trim() : undefined;
 
-  // valida status quando presente
   if (status) {
     const allowed: SectorStatus[] = ['Aberto', 'Restrito'];
     if (!allowed.includes(status)) return res.status(400).json({ error: 'invalid status' });
     sector.status = status;
-    // se abriu, remover campos de restrição
     if (status !== 'Restrito') {
       delete sector.reason;
       delete sector.etaMinutes;
@@ -105,24 +169,18 @@ app.post('/sectors/:id', (req, res) => {
     }
   }
 
-  // só grava reason/eta/instruction quando vierem explicitamente
   if (typeof reason === 'string' && reason.length) sector.reason = reason;
   if (typeof eta === 'number' && !Number.isNaN(eta)) sector.etaMinutes = eta;
   if (typeof instruction === 'string' && instruction.length) sector.instruction = instruction;
 
-  // enviar evento SSE (payload completo do setor)
   const update: PanelUpdate = { type: 'sector', payload: sector, timestamp: new Date().toISOString() };
   sendEvent(update);
-
-  // e responder com o setor atualizado
   return res.json(sector);
 });
 
+app.get('/physicians', requireAuth, (_req, res) => res.json(Array.from(physicians.values())));
 
-// REST endpoints - physicians
-app.get('/physicians', (_req, res) => res.json(Array.from(physicians.values())));
-
-app.post('/physicians', (req, res) => {
+app.post('/physicians', requireAuth, (req, res) => {
   const { id, name, availabilityStatus } = req.body;
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
   if (physicians.has(id)) return res.status(409).json({ error: 'id exists' });
@@ -134,7 +192,7 @@ app.post('/physicians', (req, res) => {
   res.status(201).json(doc);
 });
 
-app.post('/physicians/:id/status', (req, res) => {
+app.post('/physicians/:id/status', requireAuth, (req, res) => {
   const id = req.params.id as string;
   const status = req.body.status as PhysicianStatus;
   const allowed: PhysicianStatus[] = ['Disponível', 'Ocupado', 'Ausente'];
@@ -147,7 +205,7 @@ app.post('/physicians/:id/status', (req, res) => {
   res.json(doc);
 });
 
-app.delete('/physicians/:id', (req, res) => {
+app.delete('/physicians/:id', requireAuth, (req, res) => {
   const id = req.params.id as string;
   const existed = physicians.delete(id);
   if (!existed) return res.status(404).json({ error: 'physician not found' });
@@ -156,10 +214,9 @@ app.delete('/physicians/:id', (req, res) => {
   res.status(204).send();
 });
 
-// REST endpoints - patients
-app.get('/patients', (_req, res) => res.json(Array.from(patients.values())));
+app.get('/patients', requireAuth, (_req, res) => res.json(Array.from(patients.values())));
 
-app.post('/patients', (req, res) => {
+app.post('/patients', requireAuth, (req, res) => {
   const { id, name } = req.body;
   if (!id || !name) return res.status(400).json({ error: 'id and name required' });
   if (patients.has(id)) return res.status(409).json({ error: 'id exists' });
@@ -170,7 +227,7 @@ app.post('/patients', (req, res) => {
   res.status(201).json(p);
 });
 
-app.post('/patients/:id/route', (req, res) => {
+app.post('/patients/:id/route', requireAuth, (req, res) => {
   const id = req.params.id as string;
   const route = req.body.route as Route;
   const allowed: Route[] = ['Sala Vermelha','Sala Amarela','Sala Verde','Aguardando'];
@@ -183,7 +240,7 @@ app.post('/patients/:id/route', (req, res) => {
   res.json(patient);
 });
 
-app.delete('/patients/:id', (req, res) => {
+app.delete('/patients/:id', requireAuth, (req, res) => {
   const id = req.params.id as string;
   const existed = patients.delete(id);
   if (!existed) return res.status(404).json({ error: 'patient not found' });
@@ -192,13 +249,26 @@ app.delete('/patients/:id', (req, res) => {
   res.status(204).send();
 });
 
-// TV route
+// TV route (mantive pública)
 app.get('/tv', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'tv.html'));
+  res.sendFile(path.join(publicPath, 'tv.html'));
 });
 
-// fallback already served by express.static for public files
+// proteger acesso direto ao index.html (se alguém tentar /index.html)
+app.get('/index.html', requireAuth, (req, res) => {
+  return res.sendFile(path.join(publicPath, 'index.html'));
+});
 
-app.listen(PORT, "0.0.0.0", () => {
+// Root: serve painel (index.html) apenas se autenticado, caso contrário redireciona para /login
+app.get('/', (req, res) => {
+  if (req.session && (req.session as any).isAdmin) {
+    return res.sendFile(path.join(publicPath, 'index.html'));
+  }
+  return res.redirect('/login');
+});
+
+// fallback: static already serve arquivos estáticos (css/js/images) do public (com index:false)
+
+app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on 0.0.0.0:${PORT}`);
 });

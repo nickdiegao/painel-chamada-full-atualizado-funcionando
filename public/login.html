@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Acesso — Painel Administrativo</title>
+  <link rel="stylesheet" href="/login.css" />
+</head>
+<body>
+  <main class="wrap">
+    <div class="card">
+      <header class="card-header">
+        <img src="/logo.png" alt="Logo" class="logo" />
+        <h1>Acesso Administrativo</h1>
+        <p class="subtitle">Informe suas credenciais para acessar o painel</p>
+      </header>
+
+      <form id="login-form" class="form" autocomplete="on">
+        <label class="field">
+          <span>Usuário</span>
+          <input id="username" name="username" type="text" autocomplete="username" required />
+        </label>
+
+        <label class="field">
+          <span>Senha</span>
+          <input id="password" name="password" type="password" autocomplete="current-password" required />
+        </label>
+
+        <div id="error" class="error" role="alert" aria-live="polite" hidden></div>
+
+        <button id="submit" type="submit" class="btn">Entrar</button>
+      </form>
+
+      <footer class="card-footer">
+        <small>Se esqueceu a senha, contate o administrador.</small>
+      </footer>
+    </div>
+  </main>
+
+  <script src="/login.js"></script>
+</body>
+</html>

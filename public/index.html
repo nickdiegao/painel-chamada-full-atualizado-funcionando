@@ -7,6 +7,28 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <!-- LOGIN OVERLAY
+  <div id="login-overlay">
+    <div class="login-card">
+      <h2>Acesso Administrativo</h2>
+
+      <form id="login-form">
+        <label>
+          <span>Usuário</span>
+          <input type="text" id="login-username" required>
+        </label>
+
+        <label>
+          <span>Senha</span>
+          <input type="password" id="login-password" required>
+        </label>
+
+        <div id="login-error" style="color:#b00020;display:none;">Usuário ou senha inválidos.</div>
+
+        <button type="submit">Entrar</button>
+      </form>
+    </div>
+  </div> -->
   <div class="container">
     <img src="/logo.png" class="logo-fixa" />
     <h1>Painel de Chamada — Admin</h1>
@@ -23,37 +45,34 @@
           <option value="Aberto">Aberto</option>
           <option value="Restrito">Restrito</option>
         </select>
-        <!-- <label for="sector-reason">Motivo (se restrito):</label>
-        <input id="sector-reason" placeholder="Motivo..." /> -->
+
         <div class="reason-buttons" id="reason-buttons" style="display:none">
-  <label>Motivo da restrição:</label>
-  <div class="btn-group">
-    <button type="button" data-reason="Superlotação">Superlotação</button>
-    <button type="button" data-reason="Equipe incompleta">Equipe incompleta</button>
-    <button type="button" data-reason="Intercorrência grave">Intercorrência grave</button>
-  </div>
-</div>
+          <label>Motivo da restrição:</label>
+          <div class="btn-group">
+            <button type="button" data-reason="Superlotação">Superlotação</button>
+            <button type="button" data-reason="Equipe incompleta">Equipe incompleta</button>
+            <button type="button" data-reason="Intercorrência grave">Intercorrência grave</button>
+          </div>
+        </div>
 
-<div class="eta-select" id="eta-select" style="display:none">
-  <label>Previsão (minutos):</label>
-  <select id="sector-eta">
-  </select>
-</div>
+        <div class="eta-select" id="eta-select" style="display:none">
+          <label>Previsão (minutos):</label>
+          <select id="sector-eta"></select>
+        </div>
 
-<div class="instruction-buttons" id="instruction-buttons" style="display:none">
-  <label>Orientação para casos graves:</label>
-  <div class="btn-group">
-    <button type="button" data-instruction="Dirijam-se a recepção">Dirijam-se a recepção</button>
-    <button type="button" data-instruction="Dirijam-se a classificação de risco">Dirijam-se a classificação de risco</button>
-  </div>
-</div>
-<button id="save-sector">Salvar</button>
+        <div class="instruction-buttons" id="instruction-buttons" style="display:none">
+          <label>Orientação para casos graves:</label>
+          <div class="btn-group">
+            <button type="button" data-instruction="Dirijam-se a recepção">Dirijam-se a recepção</button>
+            <button type="button" data-instruction="Dirijam-se a classificação de risco">Dirijam-se a classificação de risco</button>
+          </div>
+        </div>
+        <button id="save-sector">Salvar</button>
       </div>
     </section>
 
     <p class="hint">Abra a TV em <a href="/tv" target="_blank">/tv</a></p>
   </div>
-
   <script src="/app.js"></script>
 </body>
 </html>

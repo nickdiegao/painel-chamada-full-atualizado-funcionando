@@ -237,3 +237,54 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 });
+
+(function () {
+  const overlay = document.getElementById("login-overlay");
+  const form = document.getElementById("login-form");
+  const errorBox = document.getElementById("login-error");
+
+  function lock() {
+    document.body.style.overflow = "hidden";
+  }
+
+  function unlock() {
+    document.body.style.overflow = "";
+    overlay.style.display = "none";
+  }
+
+  lock();
+
+  async function checkSession() {
+    const r = await fetch("/session-check");
+    const j = await r.json();
+    if (j.authenticated) unlock();
+  }
+
+  checkSession();
+
+  form.addEventListener("submit", async (ev) => {
+    ev.preventDefault();
+
+    const username = document.getElementById("login-username").value;
+    const password = document.getElementById("login-password").value;
+
+    const body = new URLSearchParams({
+      username,
+      password,
+    });
+
+    const r = await fetch("/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body,
+    });
+
+    if (r.ok) {
+      unlock();
+    } else {
+      errorBox.style.display = "block";
+    }
+  });
+})();
