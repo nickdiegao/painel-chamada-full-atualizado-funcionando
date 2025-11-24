@@ -120,11 +120,22 @@ patients.set('p2', { id: 'p2', name: 'Maria', routedTo: 'Aguardando' });
 
 // SSE clients
 const clients: Array<{ id: string; res: express.Response }> = [];
+// --- SSE broadcast seguro ---
 function sendEvent(update: PanelUpdate) {
   const payload = `data: ${JSON.stringify(update)}\n\n`;
-  clients.forEach(c => {
-    try { c.res.write(payload); } catch(e) { /* ignore */ }
-  });
+  console.log('Broadcasting SSE update -> clients:', clients.length, ' type:', update.type);
+  for (let i = clients.length - 1; i >= 0; i--) {
+    const c = clients[i];
+    try {
+      c.res.write(payload);
+      console.log(' -> wrote to', c.id);
+    } catch (err) {
+      console.warn(' -> write failed, removing client', c.id, err);
+      // remove client morto
+      clients.splice(i, 1);
+      try { c.res.end(); } catch(e) {}
+    }
+  }
 }
 
 // ---------- Authentication helpers ----------
@@ -195,38 +206,56 @@ app.post('/logout', (req, res) => {
 });
 
 // ---------- SSE endpoint (público para TVs) ----------
+// ------- SSE: TV recebe atualizações -------
+// SSE robusto - cole em src/app.ts substituindo a rota events existente
 app.get('/events', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
-  res.setHeader('Cache-Control', 'no-cache, no-transform');
-  res.setHeader('Connection', 'keep-alive');
-  res.flushHeaders && res.flushHeaders();
-  (req.socket as any).setTimeout && (req.socket as any).setTimeout(0);
+  try {
+    res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
+    res.setHeader('Connection', 'keep-alive');
 
-  const clientId = Date.now().toString();
-  clients.push({ id: clientId, res });
-  res.write(':ok\n\n');
+    // evita que middlewares de compressão/transform interfiram
+    res.flushHeaders?.();
 
-  const snapshot: PanelUpdate = {
-    type: 'snapshot',
-    payload: {
-      sectors: Array.from(sectors.values()),
-      physicians: Array.from(physicians.values()),
-      patients: Array.from(patients.values())
-    },
-    timestamp: new Date().toISOString()
-  };
-  res.write(`data: ${JSON.stringify(snapshot)}\n\n`);
+    // garante socket sem timeout
+    req.socket.setTimeout(0);
 
-  const heartbeat = setInterval(() => {
-    try { res.write(`:heartbeat ${Date.now()}\n\n`); } catch (err) {}
-  }, 15000);
+    const clientId = Date.now().toString() + '-' + Math.floor(Math.random()*1000);
+    clients.push({ id: clientId, res });
+    console.log('SSE client connected', clientId, 'total:', clients.length);
 
-  req.on('close', () => {
-    clearInterval(heartbeat);
-    const idx = clients.findIndex(c => c.id === clientId);
-    if (idx >= 0) clients.splice(idx, 1);
-  });
+    // send initial ping + snapshot
+    res.write(':connected\n\n');
+    const snapshot: PanelUpdate = {
+      type: 'snapshot',
+      payload: {
+        sectors: Array.from(sectors.values()),
+        physicians: Array.from(physicians.values()),
+        patients: Array.from(patients.values())
+      },
+      timestamp: new Date().toISOString()
+    };
+    res.write(`data: ${JSON.stringify(snapshot)}\n\n`);
+
+    // heartbeat every 15s
+    const hb = setInterval(() => {
+      try { res.write(':hb\n\n'); } catch (err) { /* ignore */ }
+    }, 15000);
+
+    req.on('close', () => {
+      clearInterval(hb);
+      const idx = clients.findIndex(c => c.id === clientId);
+      if (idx >= 0) clients.splice(idx, 1);
+      console.log('SSE client disconnected', clientId, 'total:', clients.length);
+    });
+
+  } catch (err) {
+    console.error('SSE setup error', err);
+    try { res.end(); } catch(e) {}
+  }
 });
+
+
 
 // ---------- REST endpoints (protegidos) ----------
 app.get('/sectors', requireAuth, (_req, res) => res.json(Array.from(sectors.values())));
@@ -295,4 +324,48 @@ app.get('/', (req, res) => {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on 0.0.0.0:${PORT}`);
+});
+
+// helper: extrai videoId de um URL do YouTube (aceita forms: youtu.be/ID, youtube.com/watch?v=ID, embed/ID)
+function extractYouTubeId(urlOrId: string): string | null {
+  if (!urlOrId) return null;
+  // se já for um id curto (sem caracteres inválidos)
+  if (/^[A-Za-z0-9_-]{6,}$/.test(urlOrId)) return urlOrId;
+  try {
+    const u = new URL(urlOrId);
+    if (u.hostname.includes('youtu.be')) {
+      return u.pathname.slice(1);
+    }
+    if (u.hostname.includes('youtube.com')) {
+      if (u.searchParams.has('v')) return u.searchParams.get('v');
+      const parts = u.pathname.split('/');
+      return parts.pop() || null;
+    }
+  } catch (e) {
+    // não é uma URL — talvez seja só o id
+    if (/^[A-Za-z0-9_-]{6,}$/.test(urlOrId)) return urlOrId;
+  }
+  return null;
+}
+
+// Endpoint: tocar vídeo (body: { video: "<url-ou-id>", start?: number, mute?: boolean })
+app.post('/play-video', requireAuth, (req, res) => {
+  console.log('POST /play-video body:', req.body);
+  const { video, start = 0, mute = false } = req.body || {};
+  const id = extractYouTubeId(String(video || ''));
+  console.log('extracted videoId =>', id, 'start=', start, 'mute=', mute);
+  if (!id) return res.status(400).json({ error: 'invalid video id/url' });
+
+  // envia evento SSE para TVs
+  const update: PanelUpdate = { type: 'playVideo', payload: { videoId: id, start: Number(start) || 0, mute: !!mute }, timestamp: new Date().toISOString() };
+  sendEvent(update);
+
+  return res.json({ ok: true, videoId: id });
+});
+
+// Endpoint: parar vídeo
+app.post('/stop-video', requireAuth, (_req, res) => {
+  const update: PanelUpdate = { type: 'stopVideo', payload: {}, timestamp: new Date().toISOString() };
+  sendEvent(update);
+  return res.json({ ok: true });
 });

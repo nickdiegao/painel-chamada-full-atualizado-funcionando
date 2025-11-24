@@ -23,8 +23,23 @@ export interface Patient {
   routedTo: Route;
 }
 
-export interface PanelUpdate {
-  type: 'sector' | 'physician' | 'patient' | 'snapshot';
-  payload: any;
-  timestamp: string;
-}
+// novo payload para vídeo
+export type PlayVideoPayload = {
+  videoId: string;
+  start?: number; // segundos
+  mute?: boolean;
+};
+
+// stop não precisa payload, mas mantemos objeto vazio para consistência
+export type StopVideoPayload = {};
+
+// atualize PanelUpdate para incluir playVideo/stopVideo
+export type PanelUpdate =
+  | { type: 'snapshot'; payload: { sectors: Sector[]; physicians: Physician[]; patients: Patient[] }; timestamp: string }
+  | { type: 'sector'; payload: Sector; timestamp: string }
+  | { type: 'physician'; payload: Physician; timestamp: string }
+  | { type: 'patient'; payload: Patient; timestamp: string }
+  | { type: 'playVideo'; payload: PlayVideoPayload; timestamp: string }
+  | { type: 'stopVideo'; payload: StopVideoPayload; timestamp: string };
+
+

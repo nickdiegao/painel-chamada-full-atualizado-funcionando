@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <img src="./nicholas.svg" alt="Logomarca" class="fixed-logo" aria-hidden="false" />
   <!-- LOGIN OVERLAY
   <div id="login-overlay">
     <div class="login-card">
@@ -71,8 +72,16 @@
       </div>
     </section>
 
+    <div class="control-row">
+      <label for="video-url">YouTube URL ou ID</label>
+      <input id="video-url" placeholder="https://www.youtube.com/watch?v=..." />
+      <label for="video-mute" class="inline"><input type="checkbox" id="video-mute" /> Iniciar mudo</label>
+      <button id="btn-play-video">Play</button>
+      <button id="btn-stop-video">Stop</button>
+    </div>
     <p class="hint">Abra a TV em <a href="/tv" target="_blank">/tv</a></p>
   </div>
   <script src="/app.js"></script>
+  <!-- <script src="/public/admin-controls.js"></script> -->
 </body>
 </html>

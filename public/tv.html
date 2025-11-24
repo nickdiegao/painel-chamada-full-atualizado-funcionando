@@ -7,10 +7,18 @@
   <link rel="stylesheet" href="/tv.css">
 </head>
 <body>
+  <img src="./nicholas.svg" alt="Logomarca" class="fixed-logo" aria-hidden="false" />
   <div class="tv-container">
     <img src="/logo.png" class="logo-fixa" />
     <header><h1>PLANTÃO</h1></header>
     <main><section class="tv-sectors" id="tv-sectors"></section></main>
+    <!-- onde os cards da TV já existirem -->
+    <div id="tv-video-overlay" class="tv-video-overlay" aria-hidden="true" style="display:none;">
+      <div class="tv-video-inner">
+        <div id="tv-player"></div>
+        <button id="tv-video-close" class="tv-video-close" title="Fechar vídeo">✕</button>
+      </div>
+    </div>
   </div>
   <script src="/tv.js"></script>
 </body>
