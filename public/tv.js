@@ -59,3 +59,83 @@ document.addEventListener('DOMContentLoaded', () => {
   if (pollingInterval) clearInterval(pollingInterval);
   pollingInterval = setInterval(fetchSectorsOnce, 6000);
 });
+
+// tv.js - conecta em /events e processa snapshot + updates
+(function () {
+  const es = new EventSource('/events');
+
+  es.addEventListener('message', (ev) => {
+    // mensagem textual genérica — pode ser snapshot ou update (depende do payload.type)
+    try {
+      const data = JSON.parse(ev.data);
+      handleEvent(data);
+    } catch (err) {
+      console.error('failed parse SSE data', err, ev.data);
+    }
+  });
+
+  es.addEventListener('error', (err) => {
+    console.error('SSE error', err);
+    // o EventSource tenta reconectar automaticamente; você pode mostrar alert visual se quiser
+  });
+
+  function handleEvent(update) {
+    // update.type: 'snapshot' | 'sector' | 'physician' | 'patient'
+    if (!update || !update.type) return;
+    if (update.type === 'snapshot') {
+      // repõe todo o estado
+      renderSectors(update.payload.sectors || []);
+      renderPhysicians(update.payload.physicians || []);
+      renderPatients(update.payload.patients || []);
+      return;
+    }
+
+    // updates incrementais — atualize elemento específico
+    if (update.type === 'sector') {
+      upsertSector(update.payload);
+      return;
+    }
+    if (update.type === 'physician') {
+      upsertPhysician(update.payload);
+      return;
+    }
+    if (update.type === 'patient') {
+      upsertPatient(update.payload);
+      return;
+    }
+  }
+
+  // implemente estas funções conforme seu DOM:
+  function renderSectors(sectors) {
+    // ex: limpar e redesenhar lista de setores
+    const el = document.getElementById('sectors-list');
+    if (!el) return;
+    el.innerHTML = '';
+    sectors.forEach(s => {
+      const div = document.createElement('div');
+      div.className = 'sector';
+      div.id = `sector-${s.id}`;
+      div.textContent = `${s.name} — ${s.status}${s.reason ? ' — ' + s.reason : ''}`;
+      el.appendChild(div);
+    });
+  }
+
+  function upsertSector(s) {
+    const id = `sector-${s.id}`;
+    let el = document.getElementById(id);
+    if (!el) {
+      el = document.createElement('div');
+      el.id = id;
+      el.className = 'sector';
+      document.getElementById('sectors-list')?.appendChild(el);
+    }
+    el.textContent = `${s.name} — ${s.status}${s.reason ? ' — ' + s.reason : ''}`;
+  }
+
+  function renderPhysicians(list) {
+    // adaptar similar a renderSectors
+  }
+  function upsertPhysician(p) { /* ... */ }
+  function renderPatients(list) { /* ... */ }
+  function upsertPatient(p) { /* ... */ }
+})();

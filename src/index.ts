@@ -118,15 +118,29 @@ app.post('/logout', (req, res) => {
 });
 
 // ---------- SSE endpoint (público para TVs) ----------
+// SSE endpoint robusto — substitua o atual por este
 app.get('/events', (req, res) => {
-  res.setHeader('Content-Type', 'text/event-stream');
-  res.setHeader('Cache-Control', 'no-cache');
+  // headers obrigatórios para SSE
+  res.setHeader('Content-Type', 'text/event-stream; charset=utf-8');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
   res.setHeader('Connection', 'keep-alive');
+
+  // evita que proxies ou compressão quebrem o fluxo
+  // se você usa compression middleware globalmente, ele pode bufferizar. 
+  // Uma medida é desabilitar compressão para esta rota (veja nota abaixo).
+  // Força envio imediato dos headers
+  res.flushHeaders && res.flushHeaders();
+
+  // mantém socket aberto indefinidamente
+  (req.socket as any).setTimeout && (req.socket as any).setTimeout(0);
 
   const clientId = Date.now().toString();
   clients.push({ id: clientId, res });
 
-  // send snapshot
+  // envia um heartbeat inicial de segurança (comentário)
+  res.write(':ok\n\n');
+
+  // envia snapshot inicial (conjunto completo)
   const snapshot: PanelUpdate = {
     type: 'snapshot',
     payload: {
@@ -138,11 +152,22 @@ app.get('/events', (req, res) => {
   };
   res.write(`data: ${JSON.stringify(snapshot)}\n\n`);
 
+  // envia heartbeats periódicos para manter conexão viva e detectar disconnect
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(`:heartbeat ${Date.now()}\n\n`);
+    } catch (err) {
+      // ignore
+    }
+  }, 15000); // 15s
+
   req.on('close', () => {
+    clearInterval(heartbeat);
     const idx = clients.findIndex(c => c.id === clientId);
     if (idx >= 0) clients.splice(idx, 1);
   });
 });
+
 
 // ---------- REST endpoints (agora protegidos por requireAuth) ----------
 app.get('/sectors', requireAuth, (_req, res) => res.json(Array.from(sectors.values())));
