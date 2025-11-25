@@ -72,12 +72,30 @@
       </div>
     </section>
 
-    <div class="control-row">
-      <label for="video-url">YouTube URL ou ID</label>
-      <input id="video-url" placeholder="https://www.youtube.com/watch?v=..." />
-      <label for="video-mute" class="inline"><input type="checkbox" id="video-mute" /> Iniciar mudo</label>
-      <button id="btn-play-video">Play</button>
-      <button id="btn-stop-video">Stop</button>
+    <div class="youtube-controls control-row">
+      <div class="yt-left">
+        <label for="video-url" class="sr-only">YouTube URL ou ID</label>
+        <input id="video-url" class="yt-input" placeholder="Cole a URL do YouTube ou apenas o ID (ex: EYzWKgj7ckU)" />
+        <button id="btn-paste-example" class="btn btn-ghost" title="Colar exemplo">Ex.</button>
+      </div>
+
+      <div class="yt-actions">
+        <label class="inline small-label" for="video-mute">
+          <input type="checkbox" id="video-mute" /> Iniciar mudo
+        </label>
+
+        <button id="btn-play-video" class="btn btn-primary" title="Tocar vídeo (envia para a TV)">
+          <span class="btn-icon">▶</span>
+          <span class="btn-text">Play</span>
+        </button>
+
+        <button id="btn-stop-video" class="btn btn-danger" title="Parar vídeo na TV">
+          <span class="btn-icon">■</span>
+          <span class="btn-text">Stop</span>
+        </button>
+      </div>
+
+      <div class="yt-status" id="admin-msg" aria-live="polite"></div>
     </div>
     <p class="hint">Abra a TV em <a href="/tv" target="_blank">/tv</a></p>
   </div>

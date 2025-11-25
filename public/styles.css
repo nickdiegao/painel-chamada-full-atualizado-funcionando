@@ -116,3 +116,87 @@ h1 { margin-top:0; color:#0f172a; }
   text-decoration: none;
   display: block;
 }
+
+/* ---------- YouTube Admin Controls (visual) ---------- */
+.youtube-controls {
+  display:flex;
+  gap:12px;
+  align-items:center;
+  justify-content:space-between;
+  flex-wrap:wrap;
+  padding:10px;
+  border-radius:10px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfbfd 100%);
+  border: 1px solid #e6e9ef;
+  box-shadow: 0 1px 4px rgba(16,24,40,0.04);
+  margin: 12px 0;
+}
+
+.youtube-controls .yt-left { display:flex; gap:8px; align-items:center; flex:1 1 420px; min-width:260px; }
+.youtube-controls .yt-actions { display:flex; gap:8px; align-items:center; flex:0 1 auto; }
+
+.yt-input {
+  flex:1 1 auto;
+  min-width:220px;
+  padding:10px 12px;
+  border-radius:8px;
+  border:1px solid #d6dbe8;
+  font-size:0.95rem;
+  outline: none;
+}
+.yt-input:focus { box-shadow: 0 0 0 4px rgba(99,102,241,0.06); border-color: #6366f1; }
+
+.btn {
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  padding:8px 12px;
+  border-radius:8px;
+  border:1px solid transparent;
+  cursor:pointer;
+  font-weight:600;
+  background:#fff;
+}
+.btn:disabled { opacity:0.6; cursor:not-allowed; transform: none; }
+
+.btn-ghost {
+  background: transparent;
+  border: 1px dashed #dbe4f0;
+  color: #334155;
+  padding:6px 8px;
+  font-weight:600;
+}
+
+.btn-primary {
+  background: linear-gradient(180deg,#2563eb,#1e40af);
+  color: white;
+  border-color: rgba(0,0,0,0.06);
+  box-shadow: 0 4px 10px rgba(37,99,235,0.12);
+}
+.btn-primary:hover { transform: translateY(-1px); }
+
+.btn-danger {
+  background: linear-gradient(180deg,#ef4444,#b91c1c);
+  color: white;
+  border-color: rgba(0,0,0,0.06);
+}
+.btn-danger:hover { transform: translateY(-1px); }
+
+.btn-icon { display:inline-block; width:18px; height:18px; font-size:12px; line-height:18px; text-align:center; }
+.btn-text { display:inline-block; }
+
+/* small label (mute) */
+.small-label { font-size:0.9rem; color:#374151; display:flex; gap:6px; align-items:center; }
+
+/* status area */
+.yt-status { min-width:160px; color:#334155; font-size:0.92rem; margin-left:8px; }
+
+/* accessibility helper (hidden label) */
+.sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); border:0; }
+
+/* responsiveness */
+@media (max-width:720px) {
+  .youtube-controls { flex-direction:column; align-items:stretch; }
+  .youtube-controls .yt-actions { justify-content:flex-start; }
+}
+

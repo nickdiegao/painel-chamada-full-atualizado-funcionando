@@ -16,30 +16,46 @@
   }
 
   // ---------- UI: render de setores (admin) ----------
-  function renderSectorsAdmin(list) {
-    const container = el('sectors-list');
-    if (!container) return;
-    container.innerHTML = '';
-    (Array.isArray(list) ? list : []).forEach(s => {
-      const div = document.createElement('div');
-      div.className = `sector-card ${s.status || ''}`;
-      div.innerHTML = `<div><strong>${escapeHtml(s.name)}</strong>
-        <div class="small">Status: ${escapeHtml(s.status || '')}${s.status==='Restrito' && s.reason ? ' — '+escapeHtml(s.reason) : ''}</div></div>
-        <div><button type="button" data-id="${escapeHtml(s.id)}" class="btn-edit-sector">Editar</button></div>`;
-      container.appendChild(div);
-    });
+function renderSectorsAdmin(list) {
+  const container = el('sectors-list');
+  if (!container) return;
+  container.innerHTML = '';
+  (Array.isArray(list) ? list : []).forEach(s => {
+    const div = document.createElement('div');
+    div.className = `sector-card ${s.status || ''}`;
+    div.innerHTML = `<div><strong>${escapeHtml(s.name)}</strong>
+      <div class="small">Status: ${escapeHtml(s.status || '')}${s.status==='Restrito' && s.reason ? ' — '+escapeHtml(s.reason) : ''}</div></div>
+      <div><button type="button" data-id="${escapeHtml(s.id)}" class="btn-edit-sector">Editar</button></div>`;
+    container.appendChild(div);
+  });
 
-    // rebuild select
-    const sel = el('sector-select');
-    if (sel) {
-      sel.innerHTML = '';
-      (Array.isArray(list) ? list : []).forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.id; opt.text = s.name;
-        sel.appendChild(opt);
-      });
-    }
+  // rebuild select
+  const sel = el('sector-select');
+  if (sel) {
+    sel.innerHTML = '';
+    (Array.isArray(list) ? list : []).forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id; opt.text = s.name;
+      sel.appendChild(opt);
+    });
   }
+
+  // re-wire buttons that exist inside the admin form every time we re-render
+  // (important: buttons are recreated so listeners must be reattached)
+  wireReasonButtons();
+  wireInstructionButtons();
+
+  // also re-bind edit buttons inside the rendered cards (optional convenience)
+  qsa('.btn-edit-sector').forEach(b => {
+    b.removeEventListener('click', b._admin_edit_handler);
+    b._admin_edit_handler = (ev) => {
+      const id = b.getAttribute('data-id');
+      if (id) selectSector(id);
+    };
+    b.addEventListener('click', b._admin_edit_handler);
+  });
+}
+
 
   function escapeHtml(s) {
     if (s == null) return '';
@@ -135,37 +151,72 @@
     }
   }
 
-  function wireReasonButtons() {
-    const group = qsa('#reason-buttons .btn-group button');
-    group.forEach(b => {
-      b.addEventListener('click', () => {
-        group.forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-        const reasonInput = el('sector-reason');
-        if (reasonInput) reasonInput.value = '';
-      });
-    });
-  }
+// ---- show/hide + limpeza quando alterna status ----
+function showOrHideRestrictControls(status) {
+  const show = status === 'Restrito';
+  const reasonBox = el('reason-buttons');
+  const etaBox = el('eta-select');
+  const instrBox = el('instruction-buttons');
 
-  function wireInstructionButtons() {
-    const group = qsa('#instruction-buttons .btn-group button');
-    group.forEach(b => {
-      b.addEventListener('click', () => {
-        group.forEach(x => x.classList.remove('active'));
-        b.classList.add('active');
-      });
-    });
-  }
+  if (reasonBox) reasonBox.style.display = show ? 'block' : 'none';
+  if (etaBox) etaBox.style.display = show ? 'block' : 'none';
+  if (instrBox) instrBox.style.display = show ? 'block' : 'none';
 
-  function showOrHideRestrictControls(status) {
-    const show = status === 'Restrito';
-    const reasonBox = el('reason-buttons');
-    const etaBox = el('eta-select');
-    const instrBox = el('instruction-buttons');
-    if (reasonBox) reasonBox.style.display = show ? 'block' : 'none';
-    if (etaBox) etaBox.style.display = show ? 'block' : 'none';
-    if (instrBox) instrBox.style.display = show ? 'block' : 'none';
+  if (!show) {
+    // limpar estado de restrição quando abre (para evitar ficar visível em Aberto)
+    qsa('#reason-buttons .btn-group button').forEach(b => b.classList.remove('active'));
+    qsa('#instruction-buttons .btn-group button').forEach(b => b.classList.remove('active'));
+    const reasonInput = el('sector-reason');
+    if (reasonInput) reasonInput.value = '';
+    const etaSel = el('sector-eta');
+    if (etaSel) etaSel.value = '';
+  } else {
+    // se mostrar, garantir que exista um valor em eta (opcional)
+    const etaSel = el('sector-eta');
+    if (etaSel && !etaSel.value) etaSel.value = etaSel.querySelector('option') ? etaSel.querySelector('option').value : '';
   }
+}
+
+// ---- quando clicar nas botoes de motivo: marcar active + forçar status=Restrito ----
+function wireReasonButtons() {
+  const group = qsa('#reason-buttons .btn-group button');
+  group.forEach(b => {
+    b.addEventListener('click', () => {
+      // marca botão ativo visualmente
+      group.forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+
+      // limpa input textual de motivo (caso tenha)
+      const reasonInput = el('sector-reason');
+      if (reasonInput) reasonInput.value = '';
+
+      // força status para Restrito no select (e mostra controles imediatamente)
+      const statusEl = el('sector-status');
+      if (statusEl && statusEl.value !== 'Restrito') {
+        statusEl.value = 'Restrito';
+      }
+      showOrHideRestrictControls('Restrito');
+    });
+  });
+}
+
+// ---- quando clicar nas instruções: marcar active (e garantir status Restrito se necessário) ----
+function wireInstructionButtons() {
+  const group = qsa('#instruction-buttons .btn-group button');
+  group.forEach(b => {
+    b.addEventListener('click', () => {
+      group.forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+
+      // se por algum motivo o status não estiver em Restrito, ajustar
+      const statusEl = el('sector-status');
+      if (statusEl && statusEl.value !== 'Restrito') {
+        statusEl.value = 'Restrito';
+      }
+      showOrHideRestrictControls('Restrito');
+    });
+  });
+}
 
   function saveSector() {
     const sel = el('sector-select');
@@ -280,6 +331,7 @@
 
   // ---------- init bindings ----------
   document.addEventListener('DOMContentLoaded', () => {
+
     // UI init
     populateEtaOptions(180,5);
     wireReasonButtons();
@@ -289,6 +341,19 @@
     // bind save
     const saveBtn = el('save-sector');
     if (saveBtn) saveBtn.addEventListener('click', saveSector);
+
+    // dentro de document.addEventListener('DOMContentLoaded', () => { ... });
+
+    // --- adicione isto ---
+    const statusFormEl = el('sector-status');
+    if (statusFormEl) {
+      // ao mudar manualmente o select, mostramos/limpamos controles imediatamente
+      statusFormEl.addEventListener('change', (ev) => {
+        const v = (ev && ev.target && ev.target.value) ? ev.target.value : statusFormEl.value;
+        console.debug('sector-status changed ->', v);
+        showOrHideRestrictControls(v);
+      });
+    }
 
     // select change
     const selMain = el('sector-select');
@@ -358,8 +423,69 @@
       });
     }
 
+    // --- UX para YouTube controls: exemplo + spinner visual simples ---
+    document.addEventListener('DOMContentLoaded', () => {
+      const btnExample = document.getElementById('btn-paste-example');
+      const btnPlay = document.getElementById('btn-play-video');
+      const btnStop = document.getElementById('btn-stop-video');
+      const input = document.getElementById('video-url');
+      const statusEl = document.getElementById('admin-msg');
+
+      if (btnExample && input) {
+        btnExample.addEventListener('click', () => {
+          input.value = 'https://www.youtube.com/watch?v=EYzWKgj7ckU';
+          input.focus();
+        });
+      }
+
+      // visual feedback helper
+      function withLoading(button, fn) {
+        return async (...args) => {
+          try {
+            button.disabled = true;
+            const orig = button.innerHTML;
+            button.innerHTML = `<span class="btn-icon">⏳</span> <span class="btn-text">Aguarde</span>`;
+            const res = await fn(...args);
+            return res;
+          } finally {
+            button.disabled = false;
+            // restore original text (find .btn-text inside original if present)
+            // fallback to simple text
+            button.innerHTML = orig || button.innerHTML;
+          }
+        };
+      }
+
+      if (btnPlay) {
+        // assume adminPlayVideo is defined (from your app)
+        if (typeof adminPlayVideo === 'function') {
+          const handler = withLoading(btnPlay, async () => {
+            const url = input ? input.value.trim() : '';
+            const mute = !!(document.getElementById('video-mute') && document.getElementById('video-mute').checked);
+            if (!url) { statusEl && (statusEl.textContent = 'Informe a URL/ID do YouTube'); return; }
+            statusEl && (statusEl.textContent = 'Enviando comando para a TV...');
+            const res = await adminPlayVideo(url, 0, mute);
+            statusEl && (statusEl.textContent = res && res.videoId ? `Enviado: ${res.videoId}` : 'Comando enviado');
+          });
+          btnPlay.addEventListener('click', handler);
+        }
+      }
+
+      if (btnStop) {
+        if (typeof adminStopVideo === 'function') {
+          const handlerStop = withLoading(btnStop, async () => {
+            statusEl && (statusEl.textContent = 'Enviando STOP para a TV...');
+            await adminStopVideo();
+            statusEl && (statusEl.textContent = 'Parado.');
+          });
+          btnStop.addEventListener('click', handlerStop);
+        }
+      }
+    });
+
     // SSE admin
     connectAdminSSE();
   });
 
 })();
+
