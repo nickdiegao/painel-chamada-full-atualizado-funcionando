@@ -14,21 +14,19 @@ h1 { margin-top:0; color:#0f172a; }
 
 .hint { margin-top:18px; color:#556; }
 
-/* reason/instruction buttons */
 .btn-group { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
 .btn-group button { padding:8px 12px; border-radius:8px; border:1px solid #ddd; background:#fff; cursor:pointer; color: #111 ;}
 .btn-group button.active { background:#0f172a; color:#fff; border-color:transparent; }
 
-/* eta select */
 #sector-eta { padding:8px; border-radius:6px; border:1px solid #ddd; width:120px; }
 
-/* small label style */
 .admin-sector-form label { display:block; margin-top:8px; font-weight:600; }
 
 .logo-fixa {
   display: block;
-  margin: 20px auto; /* centraliza horizontalmente */
-  width: 450px; /* ajuste o tamanho aqui */
+  margin: 20px auto;
+  width: 450px;
+  
 }
 
 #login-overlay {

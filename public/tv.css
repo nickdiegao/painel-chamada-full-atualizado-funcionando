@@ -29,6 +29,13 @@ html, body {
   padding: 6px;
   display: block;
   user-select: none;
+  -webkit-user-drag: none;
+  -khtml-user-drag: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  touch-action: none;
+  cursor: default;
 }
 
 /* ---------------------------
@@ -38,10 +45,10 @@ html, body {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 900px;           /* espaço entre logos - ajuste aqui */
-  margin-top: 0;       /* ajuste vertical aqui caso queira subir */
+  gap: 900px;
+  margin-top: 20px;
   margin-bottom: 6px;
-  pointer-events: none; /* evita foco por acidente */
+  pointer-events: none; 
 }
 .logo-wrapper img {
   display: block;
