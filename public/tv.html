@@ -7,19 +7,27 @@
   <link rel="stylesheet" href="/tv.css">
 </head>
 <body>
+  <!-- sua logo fixa (mantive) -->
   <img src="./nicholas.svg" alt="Logomarca" class="fixed-logo" aria-hidden="false" />
-  <div class="tv-container">
+
+  <!-- Cabeçalho sempre centralizado -->
+  <div class="tv-header">
     <img src="/logo.png" class="logo-fixa" />
-    <header><h1>PLANTÃO</h1></header>
-    <main><section class="tv-sectors" id="tv-sectors"></section></main>
-    <!-- onde os cards da TV já existirem -->
-    <div id="tv-video-overlay" class="tv-video-overlay" aria-hidden="true" style="display:none;">
+    <h1>PLANTÃO</h1>
+  </div>
+
+  <!-- Corpo com setores (esquerda) e vídeo (direita) -->
+  <div class="tv-body" id="tv-body">
+    <section class="tv-sectors" id="tv-sectors"></section>
+
+    <div id="tv-video-overlay" class="tv-video-overlay" aria-hidden="true">
       <div class="tv-video-inner">
         <div id="tv-player"></div>
         <button id="tv-video-close" class="tv-video-close" title="Fechar vídeo">✕</button>
       </div>
     </div>
   </div>
+
   <script src="/tv.js"></script>
 </body>
 </html>

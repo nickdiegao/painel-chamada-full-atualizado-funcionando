@@ -1,169 +1,115 @@
-html,body{height:100%;margin:0;padding:0;background:/*71124*/#FFF8E8;color:#fff;font-family:Segoe UI, Roboto, Arial;}
-.tv-container{padding:50px 60px;box-sizing:border-box;}
-header{text-align:center;margin-bottom:28px;}
-header h1{font-size:64px;color:#154D71;animation:glowPulse 3s ease-in-out infinite;}
-@keyframes glowPulse{0%{text-shadow:0 0 8px #1C6EA4}50%{text-shadow:0 0 20px #33A1E0}100%{text-shadow:0 0 8px #1C6EA4}}
-.tv-sectors{display:flex;flex-direction:column;gap:22px;align-items:center;max-width:1200px;margin:0 auto;}
-.tv-sector{width:92%;max-width:1000px;padding:28px 36px;border-radius:14px;color:#fff;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(2,6,23,0.6);}
-
-/* === ABERTO — brilho realmente suave, respirante === */
-.tv-sector.Aberto {
-  background: linear-gradient(135deg, #064e3b 0%, #0a5f46 60%, #0f6f4f 100%);
-  color: #ffffff;
-
-  /* brilho muito leve e difuso */
-  box-shadow:
-    0 0 12px rgba(41, 221, 6, 0.1),
-    0 0 32px rgba(16, 185, 129, 0.08);
-
-  /* sem deslocamento perceptível */
-  animation: openUltraSoft 6s ease-in-out infinite;
-}
-
-/* super suave, como respiração — sem saltos */
-@keyframes openUltraSoft {
-  0% {
-    box-shadow:
-      0 0 14px rgba(16, 185, 129, 0.10),
-      0 0 32px rgba(16, 185, 129, 0.08);
-    filter: brightness(1);
-  }
-  50% {
-    box-shadow:
-      0 0 22px rgba(16, 185, 129, 0.14),
-      0 0 48px rgba(16, 185, 129, 0.12);
-    filter: brightness(1.06);
-  }
-  100% {
-    box-shadow:
-      0 0 14px rgba(16, 185, 129, 0.10),
-      0 0 32px rgba(16, 185, 129, 0.08);
-    filter: brightness(1);
-  }
-}
-
-@keyframes openPulse{0%{transform:translateY(0);opacity:1;}50%{transform:translateY(-6px);opacity:0.95;}100%{transform:translateY(0);opacity:1;}}
-.tv-sector.Restrito {
-  background: linear-gradient(135deg, #cc3333, #b91c1c); /* vermelho mais escuro */
-  animation: restrictedGlow 2s ease-in-out infinite;
-}
-@keyframes restrictedGlow {
-  0% {
-    box-shadow: 0 0 15px rgba(255, 80, 80, 0.5),
-                0 0 30px rgba(255, 20, 20, 0.6);
-  }
-  50% {
-    box-shadow: 0 0 30px rgba(255, 100, 100, 0.9),
-                0 0 50px rgba(255, 40, 40, 1);
-  }
-  100% {
-    box-shadow: 0 0 15px rgba(255, 80, 80, 0.5),
-                0 0 30px rgba(255, 20, 20, 0.6);
-  }
-}
-.tv-sector h3{margin:0;font-size:32px;font-weight:800;}
-.tv-sector .bigstatus{margin-top:12px;font-size:44px;font-weight:900;}
-.tv-sector .reason{margin-top:14px;font-size:20px;}
-@media(max-width:700px){header h1{font-size:40px}.tv-sector{padding:18px}.tv-sector h3{font-size:20px}.tv-sector .bigstatus{font-size:28px}}
-/* Exibição clara da previsão e instrução */
-.tv-sector .eta {
-  margin-top: 10px;
-  font-size: 20px;
-  font-weight: 800;
-  color: rgba(255,255,255,0.95);
-  text-shadow: 0 1px 0 rgba(0,0,0,0.25);
-}
-
-.tv-sector .instruction {
-  margin-top: 8px;
-  font-size: 18px;
-  background: rgba(0,0,0,0.12);
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-weight: 700;
-  display: inline-block;
-}
-
-.tv-sector .reason {
-  margin-top: 12px;
-  font-size: 20px;
-  font-weight: 700;
-  opacity: 0.95;
-}
-
-.logo-fixa {
-  display: block;
-  margin: 20px auto; /* centraliza horizontalmente */
-  width: 450px; /* ajuste o tamanho aqui */
-}
-
-/* FIXED LOGO - canto inferior esquerdo */
+html,body{height:100%;margin:0;padding:0;background:#FFF8E8;color:#fff;font-family:Segoe UI, Roboto, Arial;}
+/* fixed logo bottom-left (mantive) */
 .fixed-logo,
 .fixed-logo-link img.fixed-logo {
   position: fixed;
-  bottom: 16px;      /* distância do rodapé */
-  left: 5px;        /* distância da borda esquerda */
-  width: 210px;      /* tamanho padrão - ajuste se quiser maior/menor */
+  bottom: 16px;
+  left: 5px;
+  width: 210px;
   height: auto;
-  z-index: 9999;     /* fica por cima do conteúdo */
-  padding: 6px;      /* cria espaço visual entre logo e sombra */
+  z-index: 9999;
+  padding: 6px;
   display: block;
   user-select: none;
-  -webkit-user-drag: none;
-  /* Por padrão não bloquear cliques em elementos abaixo — se quiser que clique passe através, use pointer-events:none; */
 }
 
-/* pequeno ajuste para telas pequenas */
-@media (max-width: 600px) {
-  .fixed-logo,
-  .fixed-logo-link img.fixed-logo {
-    width: 88px;
-    bottom: 12px;
-    left: 12px;
-  }
-}
+/* logo-fixa no header (mantive) */
+.logo-fixa { display:block; margin:20px auto; width:450px; }
 
-/* Variante menor: aplicar via JS ou classe para dispositivos TV */
-.fixed-logo.small {
-  width: 64px;
-  padding: 4px;
-  bottom: 10px;
-  left: 10px;
+/* header centralizado - VERMELHO: sempre centralizado */
+.tv-header {
+  text-align: center;
+  margin-top: 18px;
+  margin-bottom: 26px;
 }
-
-/* Se quiser que a logo NÃO interfira em clicks (passar clique para elemento abaixo), ative esta classe */
-.fixed-logo--pointer-through {
-  pointer-events: none;
+.tv-header h1 {
+  font-size: 64px;
+  color: #154D71;
+  animation: glowPulse 3s ease-in-out infinite;
 }
+@keyframes glowPulse{0%{text-shadow:0 0 8px #1C6EA4}50%{text-shadow:0 0 20px #33A1E0}100%{text-shadow:0 0 8px #1C6EA4}}
 
-/* Se envolveu em <a>, torne o link fixo também (usa o mesmo posicionamento) */
-.fixed-logo-link {
-  position: fixed;
-  bottom: 16px;
-  left: 16px;
-  z-index: 9999;
-  text-decoration: none;
-  display: block;
+/* -------------------- GRID / LAYOUT PRINCIPAL -------------------- */
+/* tv-body: grid com 1fr + coluna de vídeo controlada por --video-width (inicia 0) */
+:root {
+  --video-width: 0px; /* default colapsado */
 }
-
-.tv-video-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
+.tv-body {
+  display: grid;
+  grid-template-columns: 1fr var(--video-width);
+  gap: 36px;
+  align-items: center;     /* centraliza verticalmente (melhora posicionamento) */
   justify-content: center;
-  background: rgba(0,0,0,0.75);
-  z-index: 99999;
+  padding: 10px 60px 60px 60px;
+  box-sizing: border-box;
+  transition: grid-template-columns 420ms cubic-bezier(.2,.9,.2,1);
+  min-height: calc(100vh - 220px);
 }
+
+/* -------------------- SETORES (mantive estilo) -------------------- */
+.tv-sectors{display:flex;flex-direction:column;gap:22px;align-items:center;max-width:1600px;margin:0 auto;}
+.tv-sector{width:100%;max-width:1000px;padding:28px 36px;border-radius:14px;color:#fff;display:flex;flex-direction:column;box-shadow:0 10px 30px rgba(2,6,23,0.6);transform-origin:left top;transition: max-width 0.35s ease-in-out, opacity 380ms ease;}
+.tv-sector h3{margin:0;font-size:32px;font-weight:800;}
+.tv-sector .bigstatus{margin-top:12px;font-size:44px;font-weight:900;}
+.tv-sector .reason{margin-top:14px;font-size:20px;}
+@media(max-width:700px){.tv-header h1{font-size:40px}.tv-sector{padding:18px}.tv-sector h3{font-size:20px}.tv-sector .bigstatus{font-size:28px}}
+.tv-sector .eta { margin-top:10px; font-size:20px; font-weight:800; color: rgba(255,255,255,0.95); text-shadow:0 1px 0 rgba(0,0,0,0.25); }
+.tv-sector .instruction { margin-top:8px; font-size:18px; background: rgba(0,0,0,0.12); padding:8px 12px; border-radius:8px; font-weight:700; display:inline-block; }
+.tv-sector .reason { margin-top:12px; font-size:20px; font-weight:700; opacity:0.95; }
+
+/* ABERTO / RESTRITO styles (mantive suas animações) */
+.tv-sector.Aberto {
+  background: linear-gradient(135deg, #064e3b 0%, #0a5f46 60%, #0f6f4f 100%);
+  color: #ffffff;
+  box-shadow:
+    0 0 12px rgba(41, 221, 6, 0.1),
+    0 0 32px rgba(16, 185, 129, 0.08);
+  animation: openUltraSoft 6s ease-in-out infinite;
+}
+@keyframes openUltraSoft {
+  0% { box-shadow: 0 0 14px rgba(16,185,129,0.10); filter: brightness(1); }
+  50% { box-shadow: 0 0 22px rgba(16,185,129,0.14); filter: brightness(1.06); }
+  100% { box-shadow: 0 0 14px rgba(16,185,129,0.10); filter: brightness(1); }
+}
+.tv-sector.Restrito {
+  background: linear-gradient(135deg, #cc3333, #b91c1c);
+  animation: restrictedGlow 2s ease-in-out infinite;
+}
+@keyframes restrictedGlow {
+  0% { box-shadow: 0 0 15px rgba(255,80,80,0.5), 0 0 30px rgba(255,20,20,0.6); }
+  50% { box-shadow: 0 0 30px rgba(255,100,100,0.9), 0 0 50px rgba(255,40,40,1); }
+  100% { box-shadow: 0 0 15px rgba(255,80,80,0.5), 0 0 30px rgba(255,20,20,0.6); }
+}
+
+/* -------------------- VIDEO PANEL (direita) -------------------- */
+/* overlay como coluna direita; largura controlada por --video-width */
+.tv-video-overlay {
+  grid-area: auto / auto / auto / auto;
+  justify-self: center;
+  align-self: center;
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(0) scale(0.98);
+  transition: transform 420ms cubic-bezier(.2,.9,.2,1), opacity 320ms ease;
+  display: block; /* importante: não usar display:none por padrão */
+  width: 100%;
+  max-width: 100%;
+}
+
+/* inner com aspect-ratio e tamanho responsivo */
 .tv-video-inner {
-  width: min(1200px, 92%);
+  width: clamp(560px, 44vw, 950px);    /* menos agressivo em telas enormes */
   aspect-ratio: 16/9;
-  position: relative;
+  max-height: calc(100vh - 200px);     /* garante que o player não ultrapasse a viewport */
+  height: auto;
   background: #000;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
+  position: relative;
+  box-shadow: 0 14px 40px rgba(0,0,0,0.25);
 }
-#tv-player { width:100%; height:100%; }
+
+/* botão fechar */
 .tv-video-close {
   position: absolute;
   top: 8px;
@@ -175,4 +121,101 @@ header h1{font-size:64px;color:#154D71;animation:glowPulse 3s ease-in-out infini
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
+  display: none;
+}
+
+/* -------------------- ESTADO: COM VÍDEO (ativado por JS) -------------------- */
+/* Quando o JS adiciona .with-video em .tv-body, a coluna expande e o overlay é visível */
+.tv-body.with-video { /* define a largura real da coluna de vídeo */
+  /* a JS define a propriedade --video-width (ex: clamp(650px,48vw,1100px)) */
+}
+
+/* mostrando overlay */
+.tv-body.with-video .tv-video-overlay {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(6px) scale(1.06);
+}
+.tv-body.with-video .tv-video-close { display: block; }
+
+/* ----- MENOS ENCOLHIMENTO: cards um pouco maiores quando video ativo ----- */
+
+/* texto centralizado dentro dos cards (mantido) */
+.tv-body.with-video .tv-sector h3,
+.tv-body.with-video .tv-sector .bigstatus,
+.tv-body.with-video .tv-sector .reason,
+.tv-body.with-video .tv-sector .eta,
+.tv-body.with-video .tv-sector .instruction {
+  text-align: center;
+}
+
+/* sutil dim do painel ao exibir vídeo (opcional estética) */
+.tv-body.with-video .tv-sectors { filter: brightness(0.96) saturate(0.98); transition: filter 420ms ease; }
+
+/* RESPONSIVE: em telas pequenas, empilha e mantém bom comportamento */
+@media (max-width: 900px) {
+  .tv-body { grid-template-columns: 1fr; grid-template-rows: auto auto; gap: 18px; }
+  .tv-video-inner { width: 92%; max-width: 100%; margin: 0 auto; }
+  .tv-body.with-video .tv-sectors .tv-sector { transform: scale(0.98); }
+  .tv-header h1 { font-size: 40px; }
+}
+
+/* pequenas otimizações visuais */
+/* se houver iframe carregado via YT API, force o container a usar a altura correta */
+#tv-player > iframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* garantir que o iframe ocupe 100% da área sem margens */
+#tv-player, #tv-player iframe {
+  width: 100% !important;
+  height: 100% !important;
+  display:block;
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+/* Opcional – centralizar o texto dos cards quando encolhidos */
+.tv-body.with-video .tv-sector * {
+  text-align: center;
+}
+
+.tv-body:not(.with-video) .tv-sectors {
+  max-width: 1200px;        /* largura máxima original */
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+  transition: max-width 360ms ease, transform 360ms ease;
+}
+
+.tv-body:not(.with-video) .tv-sector {
+  width: 92%;               /* seu tamanho padrão */
+  max-width: 1200px;
+  padding: 28px 36px;       /* espaçamento grande como antes */
+  border-radius: 14px;
+  transform: none !important; /* remove qualquer scale aplicado antes */
+  opacity: 1 !important;
+  box-sizing: border-box;
+  transition: transform 360ms ease, opacity 320ms ease;
+}
+
+/* texto/heading em tamanho original quando não há vídeo */
+.tv-body:not(.with-video) .tv-sector h3 { font-size: 32px; font-weight: 800; text-align: left; }
+.tv-body:not(.with-video) .tv-sector .bigstatus { font-size: 44px; font-weight: 900; text-align: left; }
+.tv-body:not(.with-video) .tv-sector .reason,
+.tv-body:not(.with-video) .tv-sector .eta,
+.tv-body:not(.with-video) .tv-sector .instruction {
+  text-align: left;
+  font-size: 18px;
+}
+
+/* garante que em mobile o comportamento também volte ao original */
+@media (max-width: 900px) {
+  .tv-body:not(.with-video) .tv-sector { width: 92%; padding: 18px; }
+  .tv-body:not(.with-video) .tv-sector h3 { font-size: 20px; }
+  .tv-body:not(.with-video) .tv-sector .bigstatus { font-size: 28px; }
 }

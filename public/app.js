@@ -48,9 +48,21 @@ function renderSectorsAdmin(list) {
   // also re-bind edit buttons inside the rendered cards (optional convenience)
   qsa('.btn-edit-sector').forEach(b => {
     b.removeEventListener('click', b._admin_edit_handler);
+    // capture id from dataset and try to find the sector object in 'list' to fill form immediately
     b._admin_edit_handler = (ev) => {
       const id = b.getAttribute('data-id');
-      if (id) selectSector(id);
+      if (!id) return;
+      // encontrar o objeto na lista já disponível
+      const sectorObj = (Array.isArray(list) ? list : []).find(x => x.id === id);
+      if (sectorObj) {
+        // populate immediately using available data (snappy UX)
+        populateSectorForm(sectorObj);
+        // opcional: ainda podemos disparar um refresh em background para garantir consistência
+        // selectSector(id); // descomente se quiser forçar fetch logo em seguida
+      } else {
+        // fallback para behavior antigo (faz fetch)
+        selectSector(id);
+      }
     };
     b.addEventListener('click', b._admin_edit_handler);
   });
@@ -108,36 +120,81 @@ function renderSectorsAdmin(list) {
     // else keep previous selection if exists
   }
 
-  function selectSector(id) {
-    try { localStorage.setItem('lastSectorId', id); } catch(e) {}
-    // get sector details from server (simpler than relying on client state)
-    safeFetchJson('/sectors').then(list => {
-      if (!Array.isArray(list)) return;
-      const s = list.find(x => x.id === id);
-      if (!s) return;
-      const statusEl = el('sector-status');
-      const reasonInput = el('sector-reason');
-      const etaSel = el('sector-eta');
+  // Preenche o formulário de edição usando um objeto de setor já disponível (sem fetch)
+  function populateSectorForm(s) {
+    if (!s) return;
+    try { localStorage.setItem('lastSectorId', s.id); } catch(e) {}
 
-      if (statusEl) statusEl.value = s.status || 'Aberto';
-      if (reasonInput) reasonInput.value = s.reason || '';
-      if (etaSel && typeof s.etaMinutes === 'number') etaSel.value = String(s.etaMinutes);
+    // atualizar o <select> principal para refletir o setor selecionado
+    const sel = el('sector-select');
+    if (sel) {
+      // se a option existir, define o value; caso não exista, cria uma option temporária
+      const opt = sel.querySelector(`option[value="${s.id}"]`);
+      if (opt) sel.value = s.id;
+      else {
+        const newOpt = document.createElement('option');
+        newOpt.value = s.id;
+        newOpt.text = s.name || '—';
+        sel.appendChild(newOpt);
+        sel.value = s.id;
+      }
+    }
 
-      // set active buttons
-      qsa('#instruction-buttons .btn-group button').forEach(b => b.classList.remove('active'));
-      if (s.instruction) {
+    // se houver elemento de exibição do nome do setor (por ex. <h2 id="sector-name">), atualiza também
+    const nameEl = el('sector-name') || el('current-sector-name') || el('sector-title');
+    if (nameEl) {
+      if ('value' in nameEl) nameEl.value = s.name || '';
+      else nameEl.textContent = s.name || '';
+    }
+
+    const statusEl = el('sector-status');
+    const reasonInput = el('sector-reason');
+    const etaSel = el('sector-eta');
+
+    if (statusEl) statusEl.value = s.status || 'Aberto';
+    if (reasonInput) reasonInput.value = s.reason || '';
+    if (etaSel && typeof s.etaMinutes === 'number') etaSel.value = String(s.etaMinutes);
+    else if (etaSel) etaSel.value = '';
+
+    // set active buttons for instruction/reason (use CSS.escape where appropriate)
+    qsa('#instruction-buttons .btn-group button').forEach(b => b.classList.remove('active'));
+    if (s.instruction) {
+      try {
         const match = qs(`#instruction-buttons .btn-group button[data-instruction="${CSS.escape(s.instruction)}"]`);
         if (match) match.classList.add('active');
-      }
-      qsa('#reason-buttons .btn-group button').forEach(b => b.classList.remove('active'));
-      if (s.reason) {
+      } catch(e) { /* ignore CSS.escape issues */ }
+    }
+    qsa('#reason-buttons .btn-group button').forEach(b => b.classList.remove('active'));
+    if (s.reason) {
+      try {
         const match = qs(`#reason-buttons .btn-group button[data-reason="${CSS.escape(s.reason)}"]`);
         if (match) match.classList.add('active');
-      }
+      } catch(e) { /* ignore */ }
+    }
 
-      showOrHideRestrictControls(s.status);
-    }).catch(console.error);
+    showOrHideRestrictControls(s.status);
   }
+
+
+// agora aceita (id, preloadedSector)
+function selectSector(id, preloadedSector) {
+  if (!id) return;
+  // se temos o setor já disponível, preenche imediatamente
+  if (preloadedSector && typeof preloadedSector === 'object') {
+    populateSectorForm(preloadedSector);
+    return;
+  }
+
+  try { localStorage.setItem('lastSectorId', id); } catch(e) {}
+
+  // get sector details from server (original behavior)
+  safeFetchJson('/sectors').then(list => {
+    if (!Array.isArray(list)) return;
+    const s = list.find(x => x.id === id);
+    if (!s) return;
+    populateSectorForm(s);
+  }).catch(console.error);
+}
 
   function populateEtaOptions(maxMinutes = 180, step = 5) {
     const sel = el('sector-eta');

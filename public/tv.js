@@ -1,5 +1,4 @@
-/* public/tv.js - SSE + polling fallback + safe fetch + defensive rendering
-   Single IIFE: render, SSE, polling, YouTube player helpers. */
+/* public/tv.js - SSE + YouTube player + layout integration (corrigido) */
 (function () {
   // ---- util
   function escapeHtml(s) {
@@ -7,7 +6,7 @@
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 
-  // ---- TV render (grande tela)
+  // ---- render TV sectors (mantive seu markup)
   function renderTVSectors(list){
     const el = document.getElementById('tv-sectors');
     if (!el) { console.warn('tv: no container #tv-sectors'); return; }
@@ -32,43 +31,7 @@
     console.debug('TV rendered', list?.length ?? 0);
   }
 
-  // ---- admin-side render (defensiva)
-  function renderSectorsAdmin(list) {
-    const el = document.getElementById('sectors-list');
-    if (!el) return;
-    el.innerHTML = '';
-    if (!Array.isArray(list)) return;
-    list.forEach(s => {
-      const div = document.createElement('div');
-      div.className = 'sector';
-      div.id = `sector-${s.id}`;
-      div.textContent = `${s.name} — ${s.status}${s.reason ? ' — ' + s.reason : ''}`;
-      el.appendChild(div);
-    });
-  }
-  function upsertSectorAdmin(s) {
-    const id = `sector-${s.id}`;
-    let el = document.getElementById(id);
-    if (!el) {
-      el = document.createElement('div');
-      el.id = id;
-      el.className = 'sector';
-      document.getElementById('sectors-list')?.appendChild(el);
-    }
-    el.textContent = `${s.name} — ${s.status}${s.reason ? ' — ' + s.reason : ''}`;
-  }
-
-  // ---- simple implementations for physicians/patients
-  function renderPhysicians(list) {
-    const el = document.getElementById('physicians-list'); if (!el) return;
-    el.innerHTML = ''; if (!Array.isArray(list)) return;
-    list.forEach(p => { const d=document.createElement('div'); d.className='physician'; d.id=`phys-${p.id}`; d.textContent=`${p.name} — ${p.availabilityStatus}`; el.appendChild(d); });
-  }
-  function upsertPhysician(p) { const id=`phys-${p.id}`; let el=document.getElementById(id); if(!el){el=document.createElement('div'); el.id=id; el.className='physician'; document.getElementById('physicians-list')?.appendChild(el);} el.textContent=`${p.name} — ${p.availabilityStatus}`; }
-  function renderPatients(list) { const el=document.getElementById('patients-list'); if(!el) return; el.innerHTML=''; if(!Array.isArray(list)) return; list.forEach(pt=>{const d=document.createElement('div'); d.className='patient'; d.id=`pat-${pt.id}`; d.textContent=`${pt.name} — ${pt.routedTo||''}`; el.appendChild(d); }); }
-  function upsertPatient(p){ const id=`pat-${p.id}`; let el=document.getElementById(id); if(!el){el=document.createElement('div'); el.id=id; el.className='patient'; document.getElementById('patients-list')?.appendChild(el);} el.textContent=`${p.name} — ${p.routedTo||''}`; }
-
-  // ---- safe fetch for JSON APIs
+  // ---- safe fetch JSON
   async function safeFetchJson(url, opts = {}) {
     const cfg = Object.assign({ headers: { Accept: 'application/json' }, credentials: 'same-origin' }, opts);
     try {
@@ -76,12 +39,11 @@
       if (resp.status === 401) { window.location.href = '/login'; return null; }
       const ct = resp.headers.get('content-type') || '';
       if (!resp.ok) {
-        if (ct.includes('application/json')) { const j = await resp.json().catch(()=>null); console.error('API error', j); } 
+        if (ct.includes('application/json')) { const j = await resp.json().catch(()=>null); console.error('API error', j); }
         else { const t = await resp.text().catch(()=>null); console.error('API error (text)', t); }
         return null;
       }
       if (ct.includes('application/json')) return await resp.json();
-      // got HTML (probably login) -> redirect
       const txt = await resp.text().catch(()=>null);
       console.warn('Expected JSON but got HTML; redirecting to /login', txt && String(txt).slice(0,200));
       window.location.href = '/login';
@@ -92,50 +54,35 @@
     }
   }
 
-  // ---- single fetch used by TV fallback and incremental updates
+  // ---- fetch once
   async function fetchSectorsOnce() {
     const data = await safeFetchJson('/sectors');
     if (!data) return;
     try { renderTVSectors(data); } catch(e){ console.error('renderTVSectors failed', e); }
-    try { renderSectorsAdmin(data); } catch(e){ /* ignore */ }
   }
 
-  // ---- YouTube player helpers (kept inside same scope)
+  // ---- YouTube player logic (robusto)
   let ytApiReady = false;
   let ytPlayer = null;
-
-  function stopYouTube() {
-    try {
-      if (ytPlayer && typeof ytPlayer.destroy === 'function') {
-        ytPlayer.destroy();
-        ytPlayer = null;
-      }
-    } catch(e) { console.error('stopYouTube destroy error', e); }
-    const ov = document.getElementById('tv-video-overlay');
-    if (ov) { ov.style.display = 'none'; ov.setAttribute('aria-hidden','true'); }
-  }
+  const tvBody = () => document.getElementById('tv-body');
+  const videoOverlay = () => document.getElementById('tv-video-overlay');
 
   function ensureYouTubeApi() {
     return new Promise((resolve) => {
       if (ytApiReady) return resolve();
       if (window.YT && window.YT.Player) { ytApiReady = true; return resolve(); }
-
-      // inject script once
       if (!document.querySelector('script[src="https://www.youtube.com/iframe_api"]')) {
         const s = document.createElement('script');
         s.src = "https://www.youtube.com/iframe_api";
         document.head.appendChild(s);
       }
-
-      // global callback required by API
       const prev = window.onYouTubeIframeAPIReady;
       window.onYouTubeIframeAPIReady = function() {
         ytApiReady = true;
         if (typeof prev === 'function') try { prev(); } catch(e){}
         resolve();
       };
-
-      // safety: if API loads quickly and sets window.YT before our handler assigned
+      // fallback short delay
       setTimeout(() => {
         if (window.YT && window.YT.Player) {
           ytApiReady = true;
@@ -146,24 +93,33 @@
   }
 
   async function playYouTube(videoId, start = 0, mute = false) {
+    if (!videoId) return;
     try {
       await ensureYouTubeApi();
-    } catch(e) {
-      console.error('YouTube API load failed', e);
+    } catch (e) {
+      console.error('YouTube API failed', e);
       return;
     }
-    const ov = document.getElementById('tv-video-overlay');
-    if (!ov) {
-      console.warn('tv-video-overlay not found in DOM');
-      return;
+
+    const body = tvBody();
+    const overlay = videoOverlay();
+    if (body) {
+      // AZUL: tornar vídeo maior e centralizado
+      // tornar vídeo maior, porém com limite melhor para evitar caixas pretas
+      body.style.setProperty('--video-width', 'clamp(560px, 44vw, 950px)');
+      body.classList.add('with-video');
     }
-    ov.style.display = 'flex';
-    ov.setAttribute('aria-hidden','false');
+    if (overlay) {
+      overlay.style.opacity = '1';
+      overlay.style.pointerEvents = 'auto';
+      overlay.style.display = 'block';
+      overlay.setAttribute('aria-hidden','false');
+    }
 
     // reuse player if exists
     if (ytPlayer) {
       try {
-        ytPlayer.loadVideoById({ videoId: videoId, startSeconds: start });
+        ytPlayer.loadVideoById({ videoId, startSeconds: start });
         if (mute) ytPlayer.mute(); else ytPlayer.unMute();
         return;
       } catch (e) {
@@ -172,7 +128,7 @@
       }
     }
 
-    // create player
+    // create new player inside #tv-player
     ytPlayer = new YT.Player('tv-player', {
       videoId: videoId,
       playerVars: {
@@ -192,8 +148,10 @@
         },
         onStateChange: function(event) {
           try {
+            // ENDED -> esconder e notificar servidor para sync
             if (event.data === YT.PlayerState.ENDED) {
-              hideVideoOverlay(); // gracefully hide when ends
+              try { fetch('/stop-video', { method:'POST', credentials:'same-origin' }).catch(()=>{}); } catch(e){}
+              hideVideoOverlay();
             }
           } catch(e){ console.error('player onStateChange error', e); }
         }
@@ -202,14 +160,45 @@
   }
 
   function hideVideoOverlay() {
-    const ov = document.getElementById('tv-video-overlay');
-    if (!ov) return;
-    ov.style.display = 'none';
-    ov.setAttribute('aria-hidden', 'true');
-    try { if (ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } } catch(e){}
+    const body = tvBody();
+    const overlay = videoOverlay();
+    if (!body) return;
+    // colapsa coluna do vídeo (grid) antes de remover classe
+    body.style.setProperty('--video-width', '0px');
+    body.classList.remove('with-video');
+
+    if (overlay) {
+      overlay.setAttribute('aria-hidden','true');
+      overlay.style.pointerEvents = 'none';
+    }
+
+    // esperar transição terminar e então destruir player
+    setTimeout(() => {
+      try { if (ytPlayer && typeof ytPlayer.destroy === 'function') { ytPlayer.destroy(); ytPlayer = null; } } catch(e){ console.error(e); }
+      const playerNode = document.getElementById('tv-player');
+      if (playerNode) playerNode.innerHTML = '';
+      if (overlay) overlay.style.display = 'none';
+      // limpar variáveis CSS opcionais
+      try {
+        body.style.removeProperty('--panel-scale-active');
+        body.style.removeProperty('--sector-scale-active');
+        body.style.removeProperty('--sector-scale-alert');
+      } catch(e){}
+    }, 650);
   }
 
-  // ---- SSE connection (single, defensive) ----
+  // close button handler (delegated after DOM ready)
+  function setupCloseButton() {
+    const closeBtn = document.getElementById('tv-video-close');
+    if (!closeBtn) return;
+    closeBtn.addEventListener('click', () => {
+      // notificar servidor (mantém TVs sincronizadas)
+      fetch('/stop-video', { method:'POST', credentials:'same-origin' }).catch(()=>{});
+      hideVideoOverlay();
+    });
+  }
+
+  // ---- SSE handling (robusto) ----
   let es = null;
   function connectSSE() {
     if (es && (es.readyState === EventSource.OPEN || es.readyState === EventSource.CONNECTING)) return;
@@ -218,72 +207,53 @@
       es.onopen = () => console.info('SSE connected (client)');
       es.onmessage = ev => {
         if (!ev.data) return;
-        console.debug('SSE raw data:', ev.data);
         try {
           const data = JSON.parse(ev.data);
-          console.debug('SSE parsed:', data);
-
           if (!data || !data.type) return;
 
           if (data.type === 'snapshot') {
             renderTVSectors(data.payload?.sectors || []);
-            renderSectorsAdmin(data.payload?.sectors || []);
-            renderPhysicians(data.payload?.physicians || []);
-            renderPatients(data.payload?.patients || []);
             return;
           }
-
           if (data.type === 'sector') {
-            try { upsertSectorAdmin(data.payload); } catch(e){}
+            // refresh list defensively
             fetchSectorsOnce();
             return;
           }
-
-          if (data.type === 'physician') { try { upsertPhysician(data.payload); } catch(e){}; return; }
-          if (data.type === 'patient') { try { upsertPatient(data.payload); } catch(e){}; return; }
-
           if (data.type === 'playVideo') {
-            console.log('→ PLAY VIDEO', data.payload);
-            playYouTube(data.payload.videoId, data.payload.start || 0, !!data.payload.mute);
+            const payload = data.payload || {};
+            playYouTube(payload.videoId || payload.video || null, payload.start || 0, !!payload.mute);
             return;
           }
-
           if (data.type === 'stopVideo') {
-            console.log('→ STOP VIDEO');
-            stopYouTube();
+            hideVideoOverlay();
             return;
           }
-
         } catch (err) {
           console.error('SSE parse error', err, ev.data);
         }
       };
       es.onerror = err => {
-        console.warn('SSE error event, readyState=', es.readyState, err);
-        // EventSource will auto-reconnect; fallback polling handles absence
+        console.warn('SSE error event, readyState=', es && es.readyState, err);
       };
     } catch (e) {
       console.error('SSE create error', e);
     }
   }
 
-  // ---- polling fallback ----
+  // polling fallback
   let pollH = null;
   function startPolling() {
     if (pollH) clearInterval(pollH);
     pollH = setInterval(()=>{ if (es && es.readyState === EventSource.OPEN) return; fetchSectorsOnce(); }, 6000);
   }
 
-  // ---- bootstrap DOM listeners ----
+  // ---- DOM ready bootstrap ----
   document.addEventListener('DOMContentLoaded', () => {
     // initial load
-    fetchSectorsOnce().finally(()=>{ connectSSE(); startPolling(); });
+    fetchSectorsOnce().finally(()=>{ connectSSE(); startPolling(); setupCloseButton(); });
 
-    // close overlay button
-    const closeBtn = document.getElementById('tv-video-close');
-    if (closeBtn) closeBtn.addEventListener('click', () => hideVideoOverlay());
-
-    // ensure we close EventSource when navigating away
+    // cleanup on unload
     window.addEventListener('beforeunload', ()=>{ try{ if (es) es.close(); }catch(e){} });
   });
 
