@@ -121,3 +121,25 @@ html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,"Helv
   text-decoration: none;
   display: block;
 }
+
+/* container segurando as duas logos no topo */
+.logo-wrapper {
+  display: flex;
+  justify-content: center;    /* centraliza as logos */
+  align-items: center;
+  gap: 40px;                   /* espaço entre as logos */
+  margin-top: 20px;
+  margin-bottom: 10px;
+}
+
+/* logo já existente */
+.logo-fixa {
+  width: 150px;
+  height: auto;
+}
+
+/* segunda logo – pode ajustar tamanho independentemente */
+.second-logo {
+  width: 150px;  
+  height: auto;
+}
