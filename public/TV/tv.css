@@ -56,11 +56,11 @@ html, body {
   pointer-events: none;
 }
 .logo-fixa {
-  width: 320px; /* logo primária */
+  width: 280px; /* logo primária */
   height: auto;
 }
 .logo-fixa.second-logo {
-  width: 300px; /* logo secundária — ajuste se desejar */
+  width: 260px; /* logo secundária — ajuste se desejar */
   height: auto;
 }
 

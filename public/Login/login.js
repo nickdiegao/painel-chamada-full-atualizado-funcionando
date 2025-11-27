@@ -23,7 +23,7 @@
       const j = await r.json();
       if (j && j.authenticated) {
         // já autenticado -> ir para a tela administrativa (raiz "/")
-        window.location.href = '/';
+        window.location.href = '../Admin Panel/index.html';
       }
     } catch(e) {
       // ignore network errors, permanecer na tela de login
@@ -63,7 +63,7 @@
 
       if (r.ok && j && j.ok) {
         // login ok -> redireciona para a página administrativa (raiz)
-        window.location.href = '/';
+        window.location.href = '../Admin Panel/index.html';
         return;
       }
 

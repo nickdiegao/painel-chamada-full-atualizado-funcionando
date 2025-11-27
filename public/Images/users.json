@@ -1,0 +1,10 @@
+[
+  {
+    "username": "ti",
+    "passwordHash": "$2b$10$I3/UBdS5BhpSnnfKDOKyeeZ6KDbRn4vWuIVGJ1NC.z3qBg/WJ1FMy"
+  },
+  {
+    "username": "admin",
+    "passwordHash": "$2b$10$m4XjtXu/M5KtwPPxo8rzF.pXlhmN3czkjo4x/leqKNsBTupyaTyYa"
+  }
+]

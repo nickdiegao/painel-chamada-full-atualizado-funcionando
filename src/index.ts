@@ -65,21 +65,48 @@ function deleteUser(username: string) {
   return filtered.length !== users.length; // return true if deleted
 }
 
-// Opcional: bootstrap - cria um admin padrão se users.json estiver vazio
+// Opcional: bootstrap - cria um admin padrão e um master se users.json estiver vazio
 (function bootstrapAdmin() {
   try {
     ensureUsersFileExists();
     const users = loadUsers();
     if (users.length === 0) {
-      const adminUser = process.env.ADMIN_USER || 'admin';
-      const adminPass = process.env.ADMIN_PASS || 'senha123';
-      createUser(adminUser, adminPass);
-      console.log(`Bootstrap: created default admin '${adminUser}'`);
-    }
-  } catch (e) {
-    console.warn('bootstrapAdmin failed', e);
+      // ler e normalizar env vars
+      const adminUser = (process.env.ADMIN_USER || 'admin').toString().trim();
+      const adminPass = (process.env.ADMIN_PASS || 'senha123').toString().trim();
+
+      try {
+        createUser(adminUser, adminPass);
+        console.log(`Bootstrap: created default admin '${adminUser}'`);
+      } catch (err) {
+        if (err instanceof Error) {
+          console.warn(err.message);
+        } else {
+          console.warn(err);
+        }
+      }
+
+      // criar master opcional apenas se as duas variáveis existirem e não vazias
+      const masterUser = process.env.MASTER_USER ? process.env.MASTER_USER.toString().trim() : '';
+      const masterPass = process.env.MASTER_PASS ? process.env.MASTER_PASS.toString().trim() : '';
+      if (masterUser && masterPass) {
+        try {
+          createUser(masterUser, masterPass);
+          console.log(`Bootstrap: created master user '${masterUser}'`);
+        } catch (err) {
+            if (err instanceof Error) {
+              console.warn(err.message);
+            } else {
+              console.warn(err);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('bootstrapAdmin failed', e);
   }
 })();
+
 
 // ---------- setup Express ----------
 const app = express();
@@ -154,7 +181,7 @@ function requireAuth(req: express.Request, res: express.Response, next: express.
 // ---------- Auth endpoints ----------
 // Serve a página de login (arquivo public/login.html)
 app.get('/login', (req, res) => {
-  return res.sendFile(path.join(publicPath, 'login.html'));
+  return res.sendFile(path.join(publicPath, '../public/Login/login.html'));
 });
 
 // POST /login - único handler (usa users.json + bcrypt)
@@ -313,12 +340,12 @@ app.post('/patients/:id/route', requireAuth, (req, res) => { /* ... keep logic .
 app.delete('/patients/:id', requireAuth, (req, res) => { /* ... keep logic ... */ });
 
 // TV route
-app.get('/tv', (req, res) => res.sendFile(path.join(publicPath, 'tv.html')));
+app.get('/tv', (req, res) => res.sendFile(path.join(publicPath, '../public/TV/tv.html')));
 
 // proteger index.html
-app.get('/index.html', requireAuth, (req, res) => res.sendFile(path.join(publicPath, 'index.html')));
+app.get('index.html', requireAuth, (req, res) => res.sendFile(path.join(publicPath, '../public/Admin Panel/index.html')));
 app.get('/', (req, res) => {
-  if (req.session && (req.session as any).isAdmin) return res.sendFile(path.join(publicPath, 'index.html'));
+  if (req.session && (req.session as any).isAdmin) return res.sendFile(path.join(publicPath, '../public/Admin Panel/index.html'));
   return res.redirect('/login');
 });
 

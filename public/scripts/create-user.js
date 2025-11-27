@@ -1,7 +1,7 @@
 // scripts/create-user.js
 const fs = require('fs');
 const bcrypt = require('bcryptjs');
-const usersFile = './users.json';
+const usersFile = '../../users.json';
 const username = '';
 const password = '';
 const salt = bcrypt.hashSync(password, 10);
