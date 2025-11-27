@@ -1,5 +1,13 @@
 /* public/tv.js - SSE + YouTube player + layout integration (corrigido) */
 (function () {
+
+  // Áudios de notificação
+  const audioAberto = new Audio('/sons/setor-aberto.mp3');
+  const audioRestrito = new Audio('/sons/setor-restrito.mp3');
+
+  // permite tocar mesmo se a aba estiver em background
+  audioAberto.preload = 'auto';
+  audioRestrito.preload = 'auto';
   // ---- util
   function escapeHtml(s) {
     if (s == null) return '';
@@ -216,7 +224,21 @@
             return;
           }
           if (data.type === 'sector') {
-            // refresh list defensively
+            try { upsertSectorAdmin(data.payload); } catch(e){}
+
+            // Novo: tocar som baseado no status
+            const st = (data.payload.status || '').toLowerCase();
+
+            if (st === 'aberto') {
+              audioAberto.currentTime = 0;
+              audioAberto.play().catch(()=>{});
+            }
+
+            if (st === 'restrito') {
+              audioRestrito.currentTime = 0;
+              audioRestrito.play().catch(()=>{});
+            }
+
             fetchSectorsOnce();
             return;
           }
