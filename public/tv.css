@@ -1,7 +1,3 @@
-/* ===========================
-   TV - CSS Final (substituir)
-   =========================== */
-
 /* reset / base */
 html, body {
   height: 100%;
@@ -93,12 +89,16 @@ html, body {
 /* SEM VÍDEO → apenas 1 coluna, tudo centralizado */
 .tv-body {
   display: grid;
-  grid-template-columns: 1fr;
-  justify-items: center;     /* centraliza horizontalmente */
-  align-items: start;
-  width: 100%;
-  padding: 0 40px;
+  grid-template-columns: 1fr var(--video-width);
+  gap: 36px;
+  align-items: start;   /* <-- NÃO CENTRALIZA MAIS VERTICALMENTE */
+  justify-content: center;
+  padding: 10px 60px 60px 60px;
   box-sizing: border-box;
+
+  min-height: auto;     /* <-- REMOVE ALTURA FORÇADA */
+  height: auto;         /* <-- garante que só cresça conforme o conteúdo */
+  transition: grid-template-columns 550ms cubic-bezier(.21, .98, .25, 1), padding 350ms ease;
 }
 
 /* ---------------------------
@@ -113,7 +113,7 @@ html, body {
   min-width: 700px;
   margin: 0 auto;
   width: 100%;
-  transition: max-width 360ms ease, padding 360ms ease;
+  transition: all 400ms ease;
   box-sizing: border-box;
   flex-shrink: 0;            
   box-sizing: border-box;
@@ -129,7 +129,6 @@ html, body {
   flex-direction: column;
   box-shadow: 0 10px 30px rgba(2,6,23,0.6);
   transform-origin: left top;
-  transition: max-width 0.35s ease-in-out, opacity 380ms ease, padding 360ms ease;
   box-sizing: border-box;
 }
 
@@ -167,8 +166,8 @@ html, body {
   align-self: center;
   pointer-events: none;
   opacity: 0;
-  transform: translateY(0) scale(0.98);
-  transition: transform 420ms cubic-bezier(.2,.9,.2,1), opacity 320ms ease;
+  transform: translateX(40px) scale(0.98);
+  transition: opacity 500ms ease, transform 500ms cubic-bezier(.21, .98, .25, 1);
   display: block; /* não usar display:none para permitir transições */
   width: auto !important;
   max-width: none !important;
@@ -230,8 +229,8 @@ html, body {
 /* mostra overlay e ativa interações */
 .tv-body.with-video .tv-video-overlay {
   justify-self: center;                 /* mantém centralização na coluna */
-  transform: translateX(-30px) translateY(6px) scale(1.02);
-  transition: transform 360ms cubic-bezier(.2,.9,.2,1);
+  opacity: 1;
+  transform: translateX(0) scale(1);
 }
 .tv-body.with-video .tv-video-close { display: block; }
 
@@ -241,7 +240,6 @@ html, body {
 .tv-body.with-video .tv-sectors {
   /* permita mais espaço para os cards mesmo com a coluna de vídeo */
   max-width: min(1200px, calc(100% - var(--video-width, 0px) - 40px)) !important;
-  transition: max-width 360ms ease-in-out;
 }
 
 .tv-body.with-video .tv-sector {
@@ -252,7 +250,8 @@ html, body {
   padding-right: 44px;
   box-sizing: border-box;
   transform: none !important;
-  transition: max-width 360ms ease, padding 360ms ease;
+  opacity: 0.98;
+  transform: translateY(0);
 }
 
 /* opcional: centralizar texto dentro dos cards durante o estado with-video */
@@ -320,7 +319,66 @@ html, body {
    --------------------------- */
 /* preserve original look when no video */
 .tv-body:not(.with-video) .tv-sectors { max-width: 1200px; transition: max-width 360ms ease; }
-.tv-body:not(.with-video) .tv-sector { width: 92%; max-width: 1000px; padding: 28px 36px; transform: none !important; }
+.tv-body:not(.with-video) .tv-sector { width: 92%; max-width: 1000px; padding: 28px 36px; transform: none !important; opacity: 1;}
 
 /* small accessibility: pointer-events for logos disabled (cosmetic) */
 .logo-wrapper, .tv-header { pointer-events: none; }
+
+.tv-body .tv-sector {
+  transition:
+    max-width 550ms cubic-bezier(.21, .98, .25, 1),
+    padding 450ms ease,
+    opacity 350ms ease;
+}
+
+/* ---------- TRANSIÇÃO ULTRA SUAVE E LENTA ---------- */
+
+/* Cards (setores) transição única, sem conflito */
+.tv-body .tv-sector {
+  transition:
+    max-width 800ms cubic-bezier(.18, .89, .32, 1.12),
+    padding 750ms cubic-bezier(.18, .89, .32, 1.12),
+    opacity 650ms ease;
+}
+
+/* Container de setores também precisa suavizar */
+.tv-body .tv-sectors {
+  transition:
+    max-width 800ms cubic-bezier(.18, .89, .32, 1.12),
+    filter 600ms ease;
+}
+
+/* Vídeo entrando com fade + slide suave */
+.tv-video-overlay {
+  opacity: 0;
+  transform: translateX(50px) scale(0.97);
+  transition:
+    opacity 700ms ease,
+    transform 700ms cubic-bezier(.18, .89, .32, 1.12);
+}
+
+/* Vídeo ativo */
+.tv-body.with-video .tv-video-overlay {
+  opacity: 1;
+  transform: translateX(0px) scale(1);
+}
+
+/* Transição do grid ao abrir o vídeo */
+.tv-body {
+  transition:
+    grid-template-columns 800ms cubic-bezier(.18, .89, .32, 1.12),
+    padding 500ms ease;
+}
+
+/* Fade do layout todo */
+.tv-body {
+  will-change: grid-template-columns, padding;
+}
+
+/* Setores levemente mais opacos = efeito profissional */
+.tv-body.with-video .tv-sector {
+  opacity: 0.95;
+}
+.tv-body:not(.with-video) .tv-sector {
+  opacity: 1;
+}

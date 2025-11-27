@@ -19,11 +19,11 @@
   async function checkSession(){
     try {
       const r = await fetch('/session-check', { credentials: 'same-origin' });
-      if (!r.ok) return;
+      if (!r.ok) return;    
       const j = await r.json();
       if (j && j.authenticated) {
         // já autenticado -> ir para a tela administrativa (raiz "/")
-        window.location.href = '../Admin Panel/index.html';
+        window.location.href = '/';
       }
     } catch(e) {
       // ignore network errors, permanecer na tela de login
@@ -63,7 +63,7 @@
 
       if (r.ok && j && j.ok) {
         // login ok -> redireciona para a página administrativa (raiz)
-        window.location.href = '../Admin Panel/index.html';
+        window.location.href = '/';
         return;
       }
 
