@@ -1,14 +1,92 @@
 /* public/tv.js - SSE + YouTube player + layout integration (corrigido) */
 (function () {
+  let audioEnabled = false;
 
-  // Áudios de notificação
-  const audioAberto = new Audio('/sons/setor-aberto.mp3');
-  const audioRestrito = new Audio('/sons/setor-restrito.mp3');
+  // Bloqueios de autoplay — liberar áudio no primeiro clique
+  document.addEventListener("click", () => { audioEnabled = true; }, { once: true });
 
-  // permite tocar mesmo se a aba estiver em background
-  audioAberto.preload = 'auto';
-  audioRestrito.preload = 'auto';
-  // ---- util
+  // Toca mp3 real
+  function playSound(src) {
+    return new Promise(resolve => {
+      if (!audioEnabled) return resolve();
+      const audio = new Audio(src);
+      audio.volume = 1.0;
+      audio.onended = resolve;
+      audio.onerror = resolve;
+      audio.play().catch(resolve);
+    });
+  }
+
+  // Fila de áudio
+  const audioQueue = [];
+  let audioPlaying = false;
+
+  function queueAudio(src) {
+    audioQueue.push(src);
+    processAudioQueue();
+  }
+
+  async function processAudioQueue() {
+    if (audioPlaying || audioQueue.length === 0) return;
+    audioPlaying = true;
+    const src = audioQueue.shift();
+
+    await playSound(src);
+    await new Promise(r => setTimeout(r, 150));
+    
+    audioPlaying = false;
+    processAudioQueue();
+  }
+
+  // Controle de status por setor
+  const lastStatusBySector = new Map();
+  const lastPlayTime = new Map();
+  const COOLDOWN = 6000;
+
+  // helpers: slug simples (sem acentos)
+  function slug(name) {
+    if (!name) return '';
+    return name.toString()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
+  // Função principal: tocar campainha → voz do setor
+  function announceSectorChange(sectorName, newStatus) {
+
+    const id = slug(sectorName);
+    const prev = lastStatusBySector.get(id);
+    const now = Date.now();
+
+    lastStatusBySector.set(id, newStatus);
+
+    // só avisa se MUDOU o status
+    if (prev === newStatus) return;
+
+    // cooldown por setor
+    const last = lastPlayTime.get(id) || 0;
+    if (now - last < COOLDOWN) return;
+    lastPlayTime.set(id, now);
+
+    // 1) Campainha
+    queueAudio('/sons/aeroporto-camp.mp3');
+
+    // 2) Voz específica do setor
+    if (newStatus.toLowerCase().includes('restrito')) {
+        const path = `/sons/restrito/${id}.mp3`;
+        queueAudio(path);
+        console.log(`Setor "${sectorName}" mudou para RESTRITO`);
+        console.log(`Tocando áudio: ${path}`);
+      } else {
+        const path = `/sons/aberto/${id}.mp3`;
+        queueAudio(path);
+        console.log(`Setor "${sectorName}" mudou para ABERTO`);
+        console.log(`Tocando áudio: ${path}`);
+      }
+    }
+
   function escapeHtml(s) {
     if (s == null) return '';
     return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
@@ -220,27 +298,27 @@
           if (!data || !data.type) return;
 
           if (data.type === 'snapshot') {
-            renderTVSectors(data.payload?.sectors || []);
-            return;
+              const list = data.payload?.sectors || [];
+
+              // Inicializar estados sem tocar áudio
+              list.forEach(s => {
+                  lastStatusBySector.set(slug(s.name), s.status);
+              });
+
+              renderTVSectors(list);
+              return;
           }
           if (data.type === 'sector') {
-            try { upsertSectorAdmin(data.payload); } catch(e){}
+              const s = data.payload;
 
-            // Novo: tocar som baseado no status
-            const st = (data.payload.status || '').toLowerCase();
+              const name = s.name || s.setor || "setor";
+              const status = s.status || "";
 
-            if (st === 'aberto') {
-              audioAberto.currentTime = 0;
-              audioAberto.play().catch(()=>{});
-            }
+              announceSectorChange(name, status);
 
-            if (st === 'restrito') {
-              audioRestrito.currentTime = 0;
-              audioRestrito.play().catch(()=>{});
-            }
-
-            fetchSectorsOnce();
-            return;
+              try { upsertSectorAdmin(s); } catch(e){}
+              fetchSectorsOnce();
+              return;
           }
           if (data.type === 'playVideo') {
             const payload = data.payload || {};
