@@ -1,91 +1,193 @@
 /* public/tv.js - SSE + YouTube player + layout integration (corrigido) */
 (function () {
-  let audioEnabled = false;
 
-  // Bloqueios de autoplay — liberar áudio no primeiro clique
+  // DEBUG / áudio
+  let audioEnabled = false;
   document.addEventListener("click", () => { audioEnabled = true; }, { once: true });
 
-  // Toca mp3 real
-  function playSound(src) {
-    return new Promise(resolve => {
-      if (!audioEnabled) return resolve();
-      const audio = new Audio(src);
-      audio.volume = 1.0;
-      audio.onended = resolve;
-      audio.onerror = resolve;
-      audio.play().catch(resolve);
-    });
-  }
+  const lastStatusBySector = new Map();
+  const lastPlayTime = new Map();
+  // para DEBUG coloque 0; depois volte para 25*1000
+  const COOLDOWN_MS = 0; // <= defina 0 para testar; depois volte pra 25000
 
-  // Fila de áudio
+  let audioCtx = null;
+  
   const audioQueue = [];
   let audioPlaying = false;
 
+  function playSound(src) {
+    return new Promise(resolve => {
+      if (!audioEnabled) {
+        console.warn('playSound blocked: audio not enabled by user gesture', src);
+        return resolve();
+      }
+      try {
+        console.debug('playSound: creating audio', src);
+        const audio = new Audio(src);
+        audio.preload = 'auto';
+        audio.volume = 1.0;
+
+        let resolved = false;
+        const onDone = () => { if (!resolved) { resolved = true; cleanup(); resolve(); } };
+        const cleanup = () => {
+          audio.onended = null;
+          audio.onerror = null;
+          clearTimeout(timeoutId);
+          try { audio.pause(); } catch (e) {}
+        };
+
+        audio.onended = onDone;
+        audio.onerror = () => {
+          console.error('playSound: audio error for', src);
+          onDone();
+        };
+
+        // safety timeout: se o audio travar, resolvemos depois de 8s
+        const timeoutId = setTimeout(() => {
+          console.warn('playSound: timeout reached for', src);
+          onDone();
+        }, 8000);
+
+        audio.play().catch(err => {
+          console.error('playSound: play() rejected', src, err);
+          onDone();
+        });
+      } catch (e) {
+        console.error('playSound exception', e);
+        resolve();
+      }
+    });
+  }
+
+  // enfileira, mas tenta checar se o arquivo existe (fetch HEAD)
   function queueAudio(src) {
-    audioQueue.push(src);
-    processAudioQueue();
+    console.debug('queueAudio requested:', src);
+    // tentar HEAD (não obrigatório); se falhar, ainda enfileira para permitir fallback
+    fetch(src, { method: 'HEAD' }).then(r => {
+      if (!r.ok) {
+        console.warn('queueAudio: HEAD failed', src, r.status);
+        // opcional: não enfileirar se 404 -> return;
+      }
+    }).catch(err => {
+      console.debug('queueAudio: HEAD request error (ok):', src, err);
+    }).finally(() => {
+      audioQueue.push(src);
+      processAudioQueue();
+    });
   }
 
   async function processAudioQueue() {
-    if (audioPlaying || audioQueue.length === 0) return;
+    if (audioPlaying) {
+      // já tocando
+      return;
+    }
+    if (audioQueue.length === 0) {
+      // fila vazia
+      return;
+    }
     audioPlaying = true;
     const src = audioQueue.shift();
-
-    await playSound(src);
-    await new Promise(r => setTimeout(r, 150));
-    
-    audioPlaying = false;
-    processAudioQueue();
+    console.debug('processAudioQueue: playing', src, 'remaining queue', audioQueue.length);
+    try {
+      await playSound(src);
+      // pequeno gap entre sons
+      await new Promise(r => setTimeout(r, 180));
+    } catch (e) {
+      console.error('processAudioQueue error', e);
+    } finally {
+      audioPlaying = false;
+      // próxima execução (se houver)
+      if (audioQueue.length > 0) {
+        // usar setTimeout pequeno para evitar recursão sincronizada
+        setTimeout(processAudioQueue, 60);
+      }
+    }
   }
 
-  // Controle de status por setor
-  const lastStatusBySector = new Map();
-  const lastPlayTime = new Map();
-  const COOLDOWN = 6000;
-
-  // helpers: slug simples (sem acentos)
+  // slug helper (remova acentos / espaços)
   function slug(name) {
     if (!name) return '';
-    return name.toString()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g, '') // remove acentos
+    return String(name)
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, '-')
       .replace(/^-+|-+$/g, '');
   }
 
-  // Função principal: tocar campainha → voz do setor
-  function announceSectorChange(sectorName, newStatus) {
+  function duckYouTubeVolume() {
+    if (!ytPlayer || typeof ytPlayer.getVolume !== "function") return;
 
-    const id = slug(sectorName);
-    const prev = lastStatusBySector.get(id);
-    const now = Date.now();
-
-    lastStatusBySector.set(id, newStatus);
-
-    // só avisa se MUDOU o status
-    if (prev === newStatus) return;
-
-    // cooldown por setor
-    const last = lastPlayTime.get(id) || 0;
-    if (now - last < COOLDOWN) return;
-    lastPlayTime.set(id, now);
-
-    // 1) Campainha
-    queueAudio('/sons/aeroporto-camp.mp3');
-
-    // 2) Voz específica do setor
-    if (newStatus.toLowerCase().includes('restrito')) {
-        const path = `/sons/restrito/${id}.mp3`;
-        queueAudio(path);
-        console.log(`Setor "${sectorName}" mudou para RESTRITO`);
-        console.log(`Tocando áudio: ${path}`);
-      } else {
-        const path = `/sons/aberto/${id}.mp3`;
-        queueAudio(path);
-        console.log(`Setor "${sectorName}" mudou para ABERTO`);
-        console.log(`Tocando áudio: ${path}`);
+    try {
+      // Salva volume atual uma única vez
+      if (!ytMutedBySystem) {
+        ytVideoOriginalVolume = ytPlayer.getVolume();
       }
+
+      ytMutedBySystem = true;
+
+      // Diminui suavemente (volume 20%)
+      ytPlayer.setVolume(10);
+
+      // Se já tinha timeout, cancela
+      if (ytDuckTimeout) clearTimeout(ytDuckTimeout);
+
+      // Após X segundos restaura
+      ytDuckTimeout = setTimeout(() => {
+        try {
+          if (ytPlayer && ytMutedBySystem) {
+            ytPlayer.setVolume(ytVideoOriginalVolume);
+          }
+        } catch(e){}
+        ytMutedBySystem = false;
+      }, YT_DUCK_MS);
+
+    } catch(e){
+      console.warn("duckYouTubeVolume error", e);
     }
+  }
+
+
+  function announceSectorChange(sectorName, newStatus) {
+    try {
+      const id = slug(sectorName || '');
+      const now = Date.now();
+
+      // se não mudou desde último status, ignora
+      const prev = (lastStatusBySector.get(id) || '').toString();
+      if (prev === (newStatus || '').toString()) {
+        console.debug('announceSectorChange: status igual, ignorando', id, newStatus);
+        return;
+      }
+
+      // cooldown: evita tocar repetidamente em flaps rápidos
+      const last = lastPlayTime.get(id) || 0;
+      if (now - last < COOLDOWN_MS) {
+        console.debug('announceSectorChange: cooldown ativo, ignorando', id, newStatus, { now, last, cooldown: COOLDOWN_MS });
+        // atualiza status interno mesmo sem tocar som
+        lastStatusBySector.set(id, newStatus);
+        return;
+      }
+
+      // atualiza status
+      lastStatusBySector.set(id, newStatus);
+      lastPlayTime.set(id, now);
+
+      // caminhos
+      const bell = '/sons/aeroporto-camp.mp3';
+      const base = (String(newStatus || '').toLowerCase().includes('restrito')) ? '/sons/restrito' : '/sons/aberto';
+      const voicePath = `${base}/${id}.mp3`;
+
+      // enfileira som: campainha -> voz do setor
+      duckYouTubeVolume();   // abaixa o volume do vídeo
+      queueAudio(bell);
+      queueAudio(voicePath);
+
+      console.info('announceSectorChange queued', { sectorName, id, newStatus, bell, voicePath });
+
+    } catch (err) {
+      console.error('announceSectorChange error', err && err.message ? err.message : err);
+    }
+  }
 
   function escapeHtml(s) {
     if (s == null) return '';
@@ -152,6 +254,11 @@
   let ytPlayer = null;
   const tvBody = () => document.getElementById('tv-body');
   const videoOverlay = () => document.getElementById('tv-video-overlay');
+
+  let ytVideoOriginalVolume = 100;   // volume padrão do YouTube
+  let ytMutedBySystem = false;       // controle interno
+  let YT_DUCK_MS = 8000;             // tempo para restaurar (8s)
+  let ytDuckTimeout = null;
 
   function ensureYouTubeApi() {
     return new Promise((resolve) => {
@@ -355,6 +462,33 @@
 
     // cleanup on unload
     window.addEventListener('beforeunload', ()=>{ try{ if (es) es.close(); }catch(e){} });
+  });
+
+  function enableAudio() {
+  try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === "suspended") audioCtx.resume();
+
+      // Tocar buffer silencioso (obrigatório para desbloquear autoplay)
+      const buffer = audioCtx.createBuffer(1, 1, 22050);
+      const src = audioCtx.createBufferSource();
+      src.buffer = buffer;
+      src.connect(audioCtx.destination);
+      src.start(0);
+
+      audioEnabled = true;
+      document.getElementById("enable-sound-btn")?.classList.add("hidden");
+
+      console.warn("🔊 Áudio liberado!");
+    } catch (e) {
+      console.error("Erro ao liberar áudio", e);
+      audioEnabled = true; // fallback
+    }
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("enable-sound-btn");
+    if (btn) btn.addEventListener("click", enableAudio);
   });
 
 })();
